@@ -1,0 +1,3 @@
+[submodule "PGM-index"]
+	path = PGM-index
+	url = https://github.com/gvinciguerra/PGM-index
