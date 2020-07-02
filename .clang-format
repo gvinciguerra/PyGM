@@ -1,0 +1,8 @@
+---
+BasedOnStyle: LLVM
+BinPackArguments: 'false'
+ColumnLimit: '120'
+Language: Cpp
+IndentWidth: 4
+SpaceAfterCStyleCast: 'true'
+...
