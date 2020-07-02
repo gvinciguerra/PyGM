@@ -100,9 +100,9 @@ PYBIND11_MODULE(pypgm, m) {
         .def(py::init<py::iterator>())
 
         // sequence protocol
-        .def("__len__", &PGMWrapper::size, "Return len(self)")
+        .def("__len__", &PGMWrapper::size, "Return the number of values.")
 
-        .def("__contains__", &PGMWrapper::contains)
+        .def("__contains__", &PGMWrapper::contains, "Check whether self contains the given value or not.")
 
         .def("__getitem__",
              [](const PGMWrapper &p, py::slice slice) -> PGMWrapper * {
@@ -214,7 +214,8 @@ PYBIND11_MODULE(pypgm, m) {
         // list-like operations
         .def(
             "index",
-            [](const PGMWrapper &p, int64_t x, std::optional<ssize_t> start, std::optional<ssize_t> stop) -> py::object {
+            [](const PGMWrapper &p, int64_t x, std::optional<ssize_t> start, std::optional<ssize_t> stop)
+                -> py::object {
                 auto it = p.lower_bound(x);
                 auto index = (size_t) std::distance(p.begin(), it);
 
@@ -255,7 +256,7 @@ PYBIND11_MODULE(pypgm, m) {
                 delete[] tmp;
                 return new PGMWrapper(out, out_size);
             },
-            "")
+            "Return a new PGMIndex by merging the content of self with the given array.")
 
         .def(
             "__add__",
@@ -265,37 +266,39 @@ PYBIND11_MODULE(pypgm, m) {
                 std::merge(p.begin(), p.end(), q.begin(), q.end(), out);
                 return new PGMWrapper(out, out_size);
             },
-            "")
+            "Return a new PGMIndex by merging the content of self with the given PGMIndex.")
 
-        .def("__sub__",
-             [](const PGMWrapper &p, py::array_t<int64_t> a) {
-                 auto r = a.unchecked<1>();
-                 auto a_size = r.shape(0);
-                 auto a_begin = r.data(0);
-                 auto a_end = r.data(r.shape(0));
+        .def(
+            "__sub__",
+            [](const PGMWrapper &p, py::array_t<int64_t> a) {
+                auto r = a.unchecked<1>();
+                auto a_size = r.shape(0);
+                auto a_begin = r.data(0);
+                auto a_end = r.data(r.shape(0));
 
-                 auto tmp_out = new int64_t[p.size()];
-                 int64_t *tmp_out_end;
+                auto tmp_out = new int64_t[p.size()];
+                int64_t *tmp_out_end;
 
-                 if (std::is_sorted(a_begin, a_end))
-                     tmp_out_end = std::set_difference(p.begin(), p.end(), a_begin, a_end, tmp_out);
-                 else {
-                     auto tmp = new int64_t[a_size];
-                     std::copy(a_begin, a_end, tmp);
-                     std::sort(tmp, tmp + a_size);
-                     tmp_out_end = std::set_difference(p.begin(), p.end(), tmp, tmp + a_size, tmp_out);
-                     delete[] tmp;
-                 }
+                if (std::is_sorted(a_begin, a_end))
+                    tmp_out_end = std::set_difference(p.begin(), p.end(), a_begin, a_end, tmp_out);
+                else {
+                    auto tmp = new int64_t[a_size];
+                    std::copy(a_begin, a_end, tmp);
+                    std::sort(tmp, tmp + a_size);
+                    tmp_out_end = std::set_difference(p.begin(), p.end(), tmp, tmp + a_size, tmp_out);
+                    delete[] tmp;
+                }
 
-                 auto out_size = (size_t) std::distance(tmp_out, tmp_out_end);
-                 if (out_size == p.size())
-                     return new PGMWrapper(tmp_out, out_size);
+                auto out_size = (size_t) std::distance(tmp_out, tmp_out_end);
+                if (out_size == p.size())
+                    return new PGMWrapper(tmp_out, out_size);
 
-                 auto out = new int64_t[out_size];
-                 std::copy_n(tmp_out, out_size, out);
-                 delete[] tmp_out;
-                 return new PGMWrapper(out, out_size);
-             })
+                auto out = new int64_t[out_size];
+                std::copy_n(tmp_out, out_size, out);
+                delete[] tmp_out;
+                return new PGMWrapper(out, out_size);
+            },
+            "Return a new PGMIndex by removing from self the values found in the given array.")
 
         .def(
             "__sub__",
@@ -312,21 +315,23 @@ PYBIND11_MODULE(pypgm, m) {
                 delete[] tmp_out;
                 return new PGMWrapper(out, out_size);
             },
-            "")
+            "Return a new PGMIndex by removing from self the values found in the given PGMIndex.")
 
-        .def("drop_duplicates",
-             [](const PGMWrapper &p) {
-                 auto tmp = new int64_t[p.size()];
-                 auto size = (size_t) std::distance(tmp, std::unique_copy(p.begin(), p.end(), tmp));
+        .def(
+            "drop_duplicates",
+            [](const PGMWrapper &p) {
+                auto tmp = new int64_t[p.size()];
+                auto size = (size_t) std::distance(tmp, std::unique_copy(p.begin(), p.end(), tmp));
 
-                 if (size == p.size())
-                     return new PGMWrapper(tmp, size);
+                if (size == p.size())
+                    return new PGMWrapper(tmp, size);
 
-                 auto data = new int64_t[size];
-                 std::copy_n(tmp, size, data);
-                 delete[] tmp;
-                 return new PGMWrapper(data, size);
-             })
+                auto data = new int64_t[size];
+                std::copy_n(tmp, size, data);
+                delete[] tmp;
+                return new PGMWrapper(data, size);
+            },
+            "Return self with duplicate values removed.")
 
         // other methods
         .def("stats",
