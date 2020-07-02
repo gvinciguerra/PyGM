@@ -18,6 +18,8 @@ class PGMWrapper {
     size_t n;
     PGMIndex<K> pgm;
 
+    typedef K *(*set_fun)(const K *, const K *, const K *, const K *, K *);
+
   public:
     PGMWrapper(const std::vector<K> &vector) : n(vector.size()) {
         data = new K[n];
@@ -71,6 +73,49 @@ class PGMWrapper {
     K *upper_bound(K x) const {
         auto ap = pgm.find_approximate_position(x);
         return std::upper_bound(data + ap.lo, data + ap.hi, x);
+    }
+
+    template <set_fun F> PGMWrapper *set_operation(py::array_t<int64_t> &a, size_t out_size_hint) const {
+        auto r = a.unchecked<1>();
+        auto a_size = r.shape(0);
+        auto a_begin = r.data(0);
+        auto a_end = r.data(r.shape(0));
+
+        auto tmp_out = new int64_t[out_size_hint];
+        int64_t *tmp_out_end;
+
+        if (std::is_sorted(a_begin, a_end))
+            tmp_out_end = F(begin(), end(), a_begin, a_end, tmp_out);
+        else {
+            auto tmp = new int64_t[a_size];
+            std::copy(a_begin, a_end, tmp);
+            std::sort(tmp, tmp + a_size);
+            tmp_out_end = F(begin(), end(), tmp, tmp + a_size, tmp_out);
+            delete[] tmp;
+        }
+
+        auto out_size = (size_t) std::distance(tmp_out, tmp_out_end);
+        if (out_size == out_size_hint)
+            return new PGMWrapper(tmp_out, out_size);
+
+        auto out = new int64_t[out_size];
+        std::copy_n(tmp_out, out_size, out);
+        delete[] tmp_out;
+        return new PGMWrapper(out, out_size);
+    }
+
+    template <set_fun F> PGMWrapper *set_operation(const PGMWrapper &q, size_t out_size_hint) const {
+        auto tmp_out = new int64_t[out_size_hint];
+        auto tmp_out_end = F(begin(), end(), q.begin(), q.end(), tmp_out);
+        auto out_size = (size_t) std::distance(tmp_out, tmp_out_end);
+
+        if (out_size == out_size_hint)
+            return new PGMWrapper(tmp_out, out_size);
+
+        auto out = new int64_t[out_size];
+        std::copy_n(tmp_out, out_size, out);
+        delete[] tmp_out;
+        return new PGMWrapper(out, out_size);
     }
 
     std::unordered_map<std::string, size_t> stats() {
@@ -236,85 +281,27 @@ PYBIND11_MODULE(pypgm, m) {
         .def(
             "__add__",
             [](const PGMWrapper &p, py::array_t<int64_t> a) {
-                auto r = a.unchecked<1>();
-                auto a_size = r.shape(0);
-                auto a_begin = r.data(0);
-                auto a_end = r.data(r.shape(0));
-
-                auto out_size = p.size() + a_size;
-                auto out = new int64_t[out_size];
-
-                if (std::is_sorted(a_begin, a_end)) {
-                    std::merge(p.begin(), p.end(), a_begin, a_end, out);
-                    return new PGMWrapper(out, out_size);
-                }
-
-                auto tmp = new int64_t[a_size];
-                std::copy(a_begin, a_end, tmp);
-                std::sort(tmp, tmp + a_size);
-                std::merge(p.begin(), p.end(), tmp, tmp + a_size, out);
-                delete[] tmp;
-                return new PGMWrapper(out, out_size);
+                return p.set_operation<std::merge>(a, p.size() + a.shape(0));
             },
             "Return a new PGMIndex by merging the content of self with the given array.")
 
         .def(
             "__add__",
             [](const PGMWrapper &p, const PGMWrapper &q) {
-                auto out_size = p.size() + q.size();
-                auto out = new int64_t[out_size];
-                std::merge(p.begin(), p.end(), q.begin(), q.end(), out);
-                return new PGMWrapper(out, out_size);
+                return p.set_operation<std::merge>(q, p.size() + q.size());
             },
             "Return a new PGMIndex by merging the content of self with the given PGMIndex.")
 
         .def(
             "__sub__",
             [](const PGMWrapper &p, py::array_t<int64_t> a) {
-                auto r = a.unchecked<1>();
-                auto a_size = r.shape(0);
-                auto a_begin = r.data(0);
-                auto a_end = r.data(r.shape(0));
-
-                auto tmp_out = new int64_t[p.size()];
-                int64_t *tmp_out_end;
-
-                if (std::is_sorted(a_begin, a_end))
-                    tmp_out_end = std::set_difference(p.begin(), p.end(), a_begin, a_end, tmp_out);
-                else {
-                    auto tmp = new int64_t[a_size];
-                    std::copy(a_begin, a_end, tmp);
-                    std::sort(tmp, tmp + a_size);
-                    tmp_out_end = std::set_difference(p.begin(), p.end(), tmp, tmp + a_size, tmp_out);
-                    delete[] tmp;
-                }
-
-                auto out_size = (size_t) std::distance(tmp_out, tmp_out_end);
-                if (out_size == p.size())
-                    return new PGMWrapper(tmp_out, out_size);
-
-                auto out = new int64_t[out_size];
-                std::copy_n(tmp_out, out_size, out);
-                delete[] tmp_out;
-                return new PGMWrapper(out, out_size);
+                return p.set_operation<std::set_difference>(a, p.size());
             },
             "Return a new PGMIndex by removing from self the values found in the given array.")
 
         .def(
             "__sub__",
-            [](const PGMWrapper &p, const PGMWrapper &q) {
-                auto tmp_out = new int64_t[p.size()];
-                auto tmp_out_end = std::set_difference(p.begin(), p.end(), q.begin(), q.end(), tmp_out);
-                auto out_size = (size_t) std::distance(tmp_out, tmp_out_end);
-
-                if (out_size == p.size())
-                    return new PGMWrapper(tmp_out, out_size);
-
-                auto out = new int64_t[out_size];
-                std::copy_n(tmp_out, out_size, out);
-                delete[] tmp_out;
-                return new PGMWrapper(out, out_size);
-            },
+            [](const PGMWrapper &p, const PGMWrapper &q) { return p.set_operation<std::set_difference>(q, p.size()); },
             "Return a new PGMIndex by removing from self the values found in the given PGMIndex.")
 
         .def(
