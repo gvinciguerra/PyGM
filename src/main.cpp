@@ -212,15 +212,14 @@ PYBIND11_MODULE(pypgm, m) {
             py::keep_alive<0, 1>())
 
         // list-like operations
-        // FIXME: optional arguments
         .def(
             "index",
-            [](const PGMWrapper &p, int64_t x, ssize_t *start, ssize_t *stop) -> py::object {
+            [](const PGMWrapper &p, int64_t x, std::optional<ssize_t> start, std::optional<ssize_t> stop) -> py::object {
                 auto it = p.lower_bound(x);
                 auto index = (size_t) std::distance(p.begin(), it);
 
                 size_t left, right, step, length;
-                auto slice = py::slice(start ? *start : 0, stop ? *stop : ssize_t(p.size()), 1);
+                auto slice = py::slice(start.value_or(0), stop.value_or(p.size()), 1);
                 slice.compute(p.size(), &left, &right, &step, &length);
 
                 if (it >= p.end() || *it != x || index < left || index > right)
@@ -229,8 +228,8 @@ PYBIND11_MODULE(pypgm, m) {
             },
             "Return the first index of x. Raises ValueError if x is not present.",
             "x"_a,
-            "start"_a = nullptr,
-            "stop"_a = nullptr)
+            "start"_a = std::nullopt,
+            "stop"_a = std::nullopt)
 
         // multiset operations
         .def(
