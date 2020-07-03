@@ -21,15 +21,22 @@ class PGMWrapper {
 
     typedef K *(*set_fun)(const K *, const K *, const K *, const K *, K *);
 
+    void build_pgm() {
+        if (n < 1ull << 15) {
+            pgm = decltype(pgm)(begin(), end());
+        } else {
+            py::gil_scoped_release release;
+            pgm = decltype(pgm)(begin(), end());
+        }
+    }
+
   public:
     PGMWrapper(const std::vector<K> &vector) : n(vector.size()) {
         data = new K[n];
         std::copy_n(vector.data(), n, data);
         if (!std::is_sorted(begin(), end()))
             std::sort(begin(), end());
-
-        py::gil_scoped_release release;
-        pgm = decltype(pgm)(begin(), end());
+        build_pgm();
     }
 
     PGMWrapper(py::iterator it) {
@@ -39,14 +46,11 @@ class PGMWrapper {
         n = v.size();
         data = new K[n];
         std::copy_n(v.data(), n, data);
-
-        py::gil_scoped_release release;
-        pgm = decltype(pgm)(begin(), end());
+        build_pgm();
     }
 
     PGMWrapper(K *data, size_t n) : data(data), n(n) {
-        py::gil_scoped_release release;
-        pgm = decltype(pgm)(begin(), end());
+        build_pgm();
     }
 
     PGMWrapper(py::array_t<K> array) {
@@ -56,9 +60,7 @@ class PGMWrapper {
         std::copy_n(r.data(0), n, data);
         if (!std::is_sorted(begin(), end()))
             std::sort(begin(), end());
-
-        py::gil_scoped_release release;
-        pgm = decltype(pgm)(begin(), end());
+        build_pgm();
     }
 
     bool contains(K x) const {
