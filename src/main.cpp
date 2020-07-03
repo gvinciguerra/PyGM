@@ -4,6 +4,7 @@
 #include <pybind11/stl.h>
 
 #include <algorithm>
+#include <regex>
 #include <unordered_map>
 #include <vector>
 
@@ -180,6 +181,32 @@ PYBIND11_MODULE(pypgm, m) {
             py::keep_alive<0, 1>())
 
         // query operations
+        .def(
+            "bisect_left",
+            [](const PGMWrapper &p, int64_t x) { return std::distance(p.begin(), p.lower_bound(x)); },
+            R"(
+                Locate the insertion point for x to maintain sorted order.
+                
+                If x is already present, the insertion point will be before (to the left of) 
+                any existing entries.
+
+                Similar to the `bisect` module in the standard library.
+            )",
+            "x"_a)
+
+        .def(
+            "bisect_right",
+            [](const PGMWrapper &p, int64_t x) { return std::distance(p.begin(), p.upper_bound(x)); },
+            R"(
+                Locate the insertion point for x to maintain sorted order.
+                
+                If x is already present, the insertion point will be after (to the right of) 
+                any existing entries.
+
+                Similar to the `bisect` module in the standard library.
+            )",
+            "x"_a)
+
         .def(
             "find_lt",
             [](const PGMWrapper &p, int64_t x) {
