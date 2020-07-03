@@ -73,7 +73,11 @@ class PGMWrapper {
 
     K *upper_bound(K x) const {
         auto ap = pgm.find_approximate_position(x);
-        return std::upper_bound(data + ap.lo, data + ap.hi, x);
+        auto it = std::upper_bound(data + ap.lo, data + ap.hi, x);
+        auto step = 1ull;
+        while (it + step < end() && *(it + step) == x)
+            step *= 2;
+        return std::upper_bound(it + (step / 2), std::min(it + step, end()), x);
     }
 
     template <set_fun F> PGMWrapper *set_operation(py::array_t<int64_t> &a, size_t out_size_hint) const {
