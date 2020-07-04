@@ -30,6 +30,8 @@ template <typename K> class PGMWrapper {
     }
 
   public:
+    PGMWrapper() = default;
+
     PGMWrapper(const std::vector<K> &vector) : n(vector.size()) {
         data = new K[n];
         std::copy_n(vector.data(), n, data);
@@ -145,6 +147,8 @@ template <typename K> class PGMWrapper {
 template <typename K> void declare_class(py::module &m, const std::string &name) {
     using PGM = PGMWrapper<K>;
     py::class_<PGM>(m, name.c_str())
+        .def(py::init<>())
+
         .def(py::init<py::array_t<K>>())
 
         .def(py::init<py::iterator>())
