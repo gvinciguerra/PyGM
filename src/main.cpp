@@ -13,8 +13,7 @@
 namespace py = pybind11;
 using namespace pybind11::literals;
 
-class PGMWrapper {
-    using K = int64_t;
+template <typename K> class PGMWrapper {
     K *data;
     size_t n;
     PGMIndex<K> pgm;
@@ -40,21 +39,19 @@ class PGMWrapper {
     }
 
     PGMWrapper(py::iterator it) {
-        std::vector<int64_t> v;
+        std::vector<K> v;
         for (; it != py::iterator::sentinel(); ++it)
-            v.push_back(it->cast<int64_t>());
+            v.push_back(it->cast<K>());
         n = v.size();
         data = new K[n];
         std::copy_n(v.data(), n, data);
         build_pgm();
     }
 
-    PGMWrapper(K *data, size_t n) : data(data), n(n) {
-        build_pgm();
-    }
+    PGMWrapper(K *data, size_t n) : data(data), n(n) { build_pgm(); }
 
-    PGMWrapper(py::array_t<K> array) {
-        auto r = array.unchecked<1>();
+    PGMWrapper(py::array_t<K> a) {
+        auto r = a.template unchecked<1>();
         n = r.shape(0);
         data = new K[n];
         std::copy_n(r.data(0), n, data);
@@ -82,19 +79,19 @@ class PGMWrapper {
         return std::upper_bound(it + (step / 2), std::min(it + step, end()), x);
     }
 
-    template <set_fun F> PGMWrapper *set_operation(py::array_t<int64_t> &a, size_t out_size_hint) const {
-        auto r = a.unchecked<1>();
+    template <set_fun F> PGMWrapper *set_operation(py::array_t<K> &a, size_t out_size_hint) const {
+        auto r = a.template unchecked<1>();
         auto a_size = r.shape(0);
         auto a_begin = r.data(0);
         auto a_end = r.data(r.shape(0));
 
-        auto tmp_out = new int64_t[out_size_hint];
-        int64_t *tmp_out_end;
+        auto tmp_out = new K[out_size_hint];
+        K *tmp_out_end;
 
         if (std::is_sorted(a_begin, a_end))
             tmp_out_end = F(begin(), end(), a_begin, a_end, tmp_out);
         else {
-            auto tmp = new int64_t[a_size];
+            auto tmp = new K[a_size];
             std::copy(a_begin, a_end, tmp);
             std::sort(tmp, tmp + a_size);
             tmp_out_end = F(begin(), end(), tmp, tmp + a_size, tmp_out);
@@ -103,32 +100,32 @@ class PGMWrapper {
 
         auto out_size = (size_t) std::distance(tmp_out, tmp_out_end);
         if (out_size == out_size_hint)
-            return new PGMWrapper(tmp_out, out_size);
+            return new PGMWrapper<K>(tmp_out, out_size);
 
-        auto out = new int64_t[out_size];
+        auto out = new K[out_size];
         std::copy_n(tmp_out, out_size, out);
         delete[] tmp_out;
-        return new PGMWrapper(out, out_size);
+        return new PGMWrapper<K>(out, out_size);
     }
 
-    template <set_fun F> PGMWrapper *set_operation(const PGMWrapper &q, size_t out_size_hint) const {
-        auto tmp_out = new int64_t[out_size_hint];
+    template <set_fun F> PGMWrapper *set_operation(const PGMWrapper<K> &q, size_t out_size_hint) const {
+        auto tmp_out = new K[out_size_hint];
         auto tmp_out_end = F(begin(), end(), q.begin(), q.end(), tmp_out);
         auto out_size = (size_t) std::distance(tmp_out, tmp_out_end);
 
         if (out_size == out_size_hint)
-            return new PGMWrapper(tmp_out, out_size);
+            return new PGMWrapper<K>(tmp_out, out_size);
 
-        auto out = new int64_t[out_size];
+        auto out = new K[out_size];
         std::copy_n(tmp_out, out_size, out);
         delete[] tmp_out;
-        return new PGMWrapper(out, out_size);
+        return new PGMWrapper<K>(out, out_size);
     }
 
     std::unordered_map<std::string, size_t> stats() {
         std::unordered_map<std::string, size_t> stats;
         stats["leaf segments"] = pgm.segments_count();
-        stats["data size"] = sizeof(K) * n;
+        stats["data size"] = sizeof(K) * n + sizeof(*this);
         stats["index size"] = pgm.size_in_bytes();
         stats["height"] = pgm.height();
         return stats;
@@ -145,34 +142,35 @@ class PGMWrapper {
     ~PGMWrapper() { delete[] data; }
 };
 
-PYBIND11_MODULE(pypgm, m) {
-    py::class_<PGMWrapper>(m, "PGMIndex")
-        .def(py::init<py::array_t<int64_t>>())
+template <typename K> void declare_class(py::module &m, const std::string &name) {
+    using PGM = PGMWrapper<K>;
+    py::class_<PGM>(m, name.c_str())
+        .def(py::init<py::array_t<K>>())
 
         .def(py::init<py::iterator>())
 
         // sequence protocol
-        .def("__len__", &PGMWrapper::size, "Return the number of values.")
+        .def("__len__", &PGM::size, "Return the number of values.")
 
-        .def("__contains__", &PGMWrapper::contains, "Check whether self contains the given value or not.")
+        .def("__contains__", &PGM::contains, "Check whether self contains the given value or not.")
 
         .def("__getitem__",
-             [](const PGMWrapper &p, py::slice slice) -> PGMWrapper * {
+             [](const PGM &p, py::slice slice) -> PGM * {
                  size_t start, stop, step, length;
                  if (!slice.compute(p.size(), &start, &stop, &step, &length))
                      throw py::error_already_set();
 
-                 auto data = new int64_t[length];
+                 auto data = new K[length];
                  for (size_t i = 0; i < length; ++i) {
                      data[i] = p[start];
                      start += step;
                  }
 
-                 return new PGMWrapper(data, length);
+                 return new PGM(data, length);
              })
 
         .def("__getitem__",
-             [](const PGMWrapper &p, ssize_t i) {
+             [](const PGM &p, ssize_t i) {
                  if (i < 0)
                      i += p.size();
                  if (i < 0 || (size_t) i >= p.size())
@@ -182,14 +180,12 @@ PYBIND11_MODULE(pypgm, m) {
 
         // iterator protocol
         .def(
-            "__iter__",
-            [](const PGMWrapper &p) { return py::make_iterator(p.begin(), p.end()); },
-            py::keep_alive<0, 1>())
+            "__iter__", [](const PGM &p) { return py::make_iterator(p.begin(), p.end()); }, py::keep_alive<0, 1>())
 
         // query operations
         .def(
             "bisect_left",
-            [](const PGMWrapper &p, int64_t x) { return std::distance(p.begin(), p.lower_bound(x)); },
+            [](const PGM &p, K x) { return std::distance(p.begin(), p.lower_bound(x)); },
             R"(
                 Locate the insertion point for x to maintain sorted order.
                 
@@ -202,7 +198,7 @@ PYBIND11_MODULE(pypgm, m) {
 
         .def(
             "bisect_right",
-            [](const PGMWrapper &p, int64_t x) { return std::distance(p.begin(), p.upper_bound(x)); },
+            [](const PGM &p, K x) { return std::distance(p.begin(), p.upper_bound(x)); },
             R"(
                 Locate the insertion point for x to maintain sorted order.
                 
@@ -215,7 +211,7 @@ PYBIND11_MODULE(pypgm, m) {
 
         .def(
             "find_lt",
-            [](const PGMWrapper &p, int64_t x) {
+            [](const PGM &p, K x) {
                 auto it = p.lower_bound(x);
                 if (it <= p.begin())
                     return py::object(py::cast(nullptr));
@@ -226,7 +222,7 @@ PYBIND11_MODULE(pypgm, m) {
 
         .def(
             "find_le",
-            [](const PGMWrapper &p, int64_t x) {
+            [](const PGM &p, K x) {
                 auto it = p.upper_bound(x);
                 if (it <= p.begin())
                     return py::object(py::cast(nullptr));
@@ -237,7 +233,7 @@ PYBIND11_MODULE(pypgm, m) {
 
         .def(
             "find_gt",
-            [](const PGMWrapper &p, int64_t x) -> py::object {
+            [](const PGM &p, K x) -> py::object {
                 auto it = p.upper_bound(x);
                 if (it >= p.end())
                     return py::object(py::cast(nullptr));
@@ -248,7 +244,7 @@ PYBIND11_MODULE(pypgm, m) {
 
         .def(
             "find_ge",
-            [](const PGMWrapper &p, int64_t x) -> py::object {
+            [](const PGM &p, K x) -> py::object {
                 auto it = p.lower_bound(x);
                 if (it >= p.end())
                     return py::object(py::cast(nullptr));
@@ -259,13 +255,13 @@ PYBIND11_MODULE(pypgm, m) {
 
         .def(
             "rank",
-            [](const PGMWrapper &p, int64_t x) { return std::distance(p.begin(), p.upper_bound(x)); },
+            [](const PGM &p, K x) { return std::distance(p.begin(), p.upper_bound(x)); },
             "Number of values less than or equal to x.",
             "x"_a)
 
         .def(
             "count",
-            [](const PGMWrapper &p, int64_t x) -> size_t {
+            [](const PGM &p, K x) -> size_t {
                 auto lb = p.lower_bound(x);
                 if (lb >= p.end() || *lb != x)
                     return 0;
@@ -276,7 +272,7 @@ PYBIND11_MODULE(pypgm, m) {
 
         .def(
             "range",
-            [](const PGMWrapper &p, int64_t a, int64_t b, std::pair<bool, bool> inclusive, bool reverse) {
+            [](const PGM &p, K a, K b, std::pair<bool, bool> inclusive, bool reverse) {
                 auto l_it = inclusive.first ? p.lower_bound(a) : p.upper_bound(a);
                 auto r_it = inclusive.second ? p.lower_bound(b) : p.upper_bound(b);
                 if (reverse)
@@ -292,8 +288,7 @@ PYBIND11_MODULE(pypgm, m) {
         // list-like operations
         .def(
             "index",
-            [](const PGMWrapper &p, int64_t x, std::optional<ssize_t> start, std::optional<ssize_t> stop)
-                -> py::object {
+            [](const PGM &p, K x, std::optional<ssize_t> start, std::optional<ssize_t> stop) -> py::object {
                 auto it = p.lower_bound(x);
                 auto index = (size_t) std::distance(p.begin(), it);
 
@@ -313,48 +308,44 @@ PYBIND11_MODULE(pypgm, m) {
         // multiset operations
         .def(
             "__add__",
-            [](const PGMWrapper &p, py::array_t<int64_t> a) {
-                return p.set_operation<std::merge>(a, p.size() + a.shape(0));
+            [](const PGM &p, py::array_t<K> a) {
+                return p.template set_operation<std::merge>(a, p.size() + a.shape(0));
             },
             "Return a new PGMIndex by merging the content of self with the given array.")
 
         .def(
             "__add__",
-            [](const PGMWrapper &p, const PGMWrapper &q) {
-                return p.set_operation<std::merge>(q, p.size() + q.size());
-            },
+            [](const PGM &p, const PGM &q) { return p.template set_operation<std::merge>(q, p.size() + q.size()); },
             "Return a new PGMIndex by merging the content of self with the given PGMIndex.")
 
         .def(
             "__sub__",
-            [](const PGMWrapper &p, py::array_t<int64_t> a) {
-                return p.set_operation<std::set_difference>(a, p.size());
-            },
+            [](const PGM &p, py::array_t<K> a) { return p.template set_operation<std::set_difference>(a, p.size()); },
             "Return a new PGMIndex by removing from self the values found in the given array.")
 
         .def(
             "__sub__",
-            [](const PGMWrapper &p, const PGMWrapper &q) { return p.set_operation<std::set_difference>(q, p.size()); },
+            [](const PGM &p, const PGM &q) { return p.template set_operation<std::set_difference>(q, p.size()); },
             "Return a new PGMIndex by removing from self the values found in the given PGMIndex.")
 
         .def(
             "drop_duplicates",
-            [](const PGMWrapper &p) {
-                auto tmp = new int64_t[p.size()];
+            [](const PGM &p) {
+                auto tmp = new K[p.size()];
                 auto size = (size_t) std::distance(tmp, std::unique_copy(p.begin(), p.end(), tmp));
 
                 if (size == p.size())
-                    return new PGMWrapper(tmp, size);
+                    return new PGM(tmp, size);
 
-                auto data = new int64_t[size];
+                auto data = new K[size];
                 std::copy_n(tmp, size, data);
                 delete[] tmp;
-                return new PGMWrapper(data, size);
+                return new PGM(data, size);
             },
             "Return self with duplicate values removed.")
 
         // other methods
-        .def("stats",
-             &PGMWrapper::stats,
-             "Return a dict containing stats about self, such as the occupied space in bytes.");
+        .def("stats", &PGM::stats, "Return a dict containing stats about self, such as the occupied space in bytes.");
 }
+
+PYBIND11_MODULE(pypgm, m) { declare_class<int64_t>(m, "PGMIndex"); }
