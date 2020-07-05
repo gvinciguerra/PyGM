@@ -63,22 +63,40 @@ class SortedList:
         raise TypeError('Unsupported argument type')
 
     def __len__(self):
-        """Return the number of values."""
+        """Return the number of elements in the sorted list.
+
+        ``self.__len__()`` <==> ``len(self)``
+
+        Returns:
+            int: size of the sorted list
+        """
         return self._impl.__len__()
 
     def __contains__(self, x):
-        """Check whether self contains the given value or not.
+        """Check whether ``self`` contains the given value ``x`` or not.
+
+        ``self.__repr__(x)`` <==> ``x in self``
 
         Args:
-            x ([type]): [description]
+            x: value to search
 
         Returns:
-            [type]: [description]
+            bool: ``True`` if an element equal to ``x`` is found, ``False``
+                otherwise
         """
-
         return self._impl.__contains__(x)
 
     def __getitem__(self, i):
+        """Return the element at position ``i``.
+
+        ``self.__getitem__(i)`` <==> ``self[i]`` 
+
+        Args:
+            i (int or slice): index of the element
+
+        Returns:
+            element at position ``i``
+        """
         if isinstance(i, slice):
             return SortedList(self._impl.__getitem__(i), self._typecode)
         return self._impl.__getitem__(i)
@@ -87,142 +105,216 @@ class SortedList:
         return self._impl.__iter__()
 
     def bisect_left(self, x):
-        """Locate the insertion point for `x` to maintain sorted order.
+        """Locate the insertion point for ``x`` to maintain sorted order.
 
-        If `x` is already present, the insertion point will be before (to the left of) 
-        any existing entries.
+        If ``x`` is already present, the insertion point will be before (to
+        the left of) any existing entries.
 
-        Similar to the `bisect` module in the standard library.
+        Similar to the ``bisect`` module in the standard library.
 
         Args:
-            x ([type]): [description]
+            x: value to compare the elements to
 
         Returns:
-            [type]: [description]
+            int: insertion index in sorted list
         """
         return self._impl.bisect_left(x)
 
     def bisect_right(self, x):
-        """Locate the insertion point for `x` to maintain sorted order.
+        """Locate the insertion point for ``x`` to maintain sorted order.
 
-        If `x` is already present, the insertion point will be after (to the right of) 
-        any existing entries.
+        If ``x`` is already present, the insertion point will be after (to the
+        right of) any existing entries.
 
-        Similar to the `bisect` module in the standard library.
+        Similar to the ``bisect`` module in the standard library.
 
         Args:
-            x ([type]): [description]
+            x: value to compare the elements to
 
         Returns:
-            [type]: [description]
+            int: insertion index in sorted list
         """
         return self._impl.bisect_right(x)
 
     def find_lt(self, x):
-        """Find the rightmost value less than `x`.
+        """Find the rightmost element less than ``x``.
 
         Args:
             x: value to compare the elements to
+
+        Returns:
+            value of the rightmost element ``< x``
         """
         return self._impl.find_lt(x)
 
     def find_le(self, x):
-        """Find the rightmost value less than or equal to `x`.
+        """Find the rightmost element less than or equal to ``x``
 
         Args:
             x: value to compare the elements to
+
+        Returns:
+            value of the rightmost element ``<= x``
         """
         return self._impl.find_le(x)
 
     def find_gt(self, x):
-        """Find the leftmost value greater than `x`.
+        """Find the leftmost element greater than ``x``.
 
         Args:
             x: value to compare the elements to
+
+        Returns:
+            value of the leftmost element ``> x``
         """
         return self._impl.find_gt(x)
 
     def find_ge(self, x):
-        """Find the leftmost value greater than or equal to `x`.
+        """Find the leftmost element greater than or equal to ``x``.
 
         Args:
             x: value to compare the elements to
+
+        Returns:
+            value of the leftmost element ``>= x``
         """
         return self._impl.find_ge(x)
 
     def rank(self, x):
-        """Number of values less than or equal to `x`.
+        """Return the number of elements less than or equal to ``x``
 
         Args:
-            x ([type]): [description]
+            x: value to compare the elements to
+
+        Returns:
+            int: number of elements ``<= x``
         """
         return self._impl.rank(x)
 
     def count(self, x):
-        """Number of values equal to `x`.
+        """Return the number of elements equal to ``x``.
 
         Args:
-            x ([type]): [description]
+            x: value to count
+
+        Returns:
+            int: number of elements ``== x``
         """
         return self._impl.count(x)
 
     def range(self, a, b, inclusive=(True, True), reverse=False):
-        """[summary]
+        """Return an iterator over elements between ``a`` and ``b``.
 
         Args:
-            a ([type]): [description]
-            b ([type]): [description]
-            inclusive (tuple, optional): [description]. Defaults to (True, True).
-            reverse (bool, optional): [description]. Defaults to False.
+            a: lower bound value
+            b: upper bound value
+            inclusive (tuple[bool, bool], optional): a pair of boolean 
+                indicating whether the bounds are inclusive (``True``) or
+                exclusive (``False``). Defaults to ``(True, True)``.
+            reverse (bool, optional): if ``True`` return an reverse iterator.
+                Defaults to ``False``.
+
+        Returns:
+            iterator over the elements between the given bounds
         """
         return self._impl.range(a, b, inclusive, reverse)
 
     def index(self, x, start=None, stop=None):
-        """Return the first index of `x`.
+        """Return the first index of ``x``.
 
         Args:
-            x ([type]): [description]
-            start ([type], optional): [description]. Defaults to None.
-            stop ([type], optional): [description]. Defaults to None.
+            x: element in the sorted list
+            start (int, optional): restrict the search to the elements from
+                this position onwards. Defaults to ``None``.
+            stop (int, optional): restrict the search to the elements before
+                this position. Defaults to ``None``.
 
         Returns:
-            [type]: [description]
+            int: first index of ``x``
 
         Raises:
-            ValueError: If `x` is not present.
+            ValueError: if ``x`` is not present
         """
         return self._impl.index(x, start, stop)
 
     def __add__(self, other):
-        """Return a new SortedList by merging the content of self with the given object.
+        """Return a new ``SortedList`` by merging the elements of ``self``
+        with ``other``.
+
+        ``self.__add__(other)`` <==> ``self + other``
 
         Args:
-            other ([type]): [description]
+            other: a sequence of values
+
+        Returns:
+            SortedList: new list with the merged elements
         """
         return SortedList(self._impl.__add__(other), self._typecode)
 
     def __sub__(self, other):
-        """Return a new SortedList by removing from self the values found in the given object.
+        """Return a new ``SortedList`` by removing from ``self`` the elements
+        found in ``other``.
+
+        Equivalent elements are treated individually, that is, if some element
+        is found m times in ``self`` and n times in ``other``, it will appear
+        max(m-n, 0) times in the result.
+
+        ``self.__sub__(other)`` <==> ``self - other``
 
         Args:
-            other ([type]): [description]
+            other: a sequence of values
+
+        Returns:
+            SortedList: new list with the elements in the difference
         """
         return SortedList(self._impl.__sub__(other), self._typecode)
 
     def drop_duplicates(self):
-        """Return self with duplicate values removed.
+        """Return ``self`` with duplicate elements removed.
 
         Returns:
-            [type]: [description]
+            SortedList: new list without duplicates
         """
         return SortedList(self._impl.drop_duplicates(), self._typecode)
 
     def stats(self):
-        """Return a dict containing stats about self, such as the occupied space in bytes.
+        """Return a dict containing statistics about self.
+
+        The keys are:
+
+        * ``'data size'``` size of the elements in bytes
+        * ``'index size'`` size of the index in bytes
+        * ``'height'`` number of levels of the index
+        * ``'leaf segments'`` number of segments in the last level of the index
+        * ``'typecode'`` type of the elements (see the `array` module)
 
         Returns:
-            [type]: [description]
+            dict[str, object]: a dictionary with stats about self
         """
         d = self._impl.stats()
         d['typecode'] = self._typecode
         return d
+
+    def __repr__(self):
+        """Return a string representation of self.
+
+        ``self.__repr__()`` <==> ``repr(self)``
+
+        Returns:
+            str: repr(self)
+        """
+        d = self._impl.stats()
+        data, index = d['data size'], d['index size']
+        name = self.__class__.__name__
+        indent = ' ' * (len(name) + 1)
+        preview = ''
+        if len(self) < 6:
+            preview += repr(list(self._impl))
+        else:
+            fmt_args = (self[0], self[1], self[2], self[-2], self[-1])
+            if self._typecode in 'fd':
+                preview += '[%g, %g, %g, ..., %g, %g]' % fmt_args
+            else:
+                preview += '[%d, %d, %d, ..., %d, %d]' % fmt_args
+        return '%s(%s,\n%stypecode=%s, bytes=(data=%d,index=%d,total=%d))' % (
+            name, preview, indent, self._typecode, data, index, data + index)

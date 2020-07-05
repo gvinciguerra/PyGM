@@ -6,8 +6,6 @@ import tempfile
 import setuptools
 from setuptools.command.build_ext import build_ext
 
-# os.environ["CC"] = "gcc-9"
-# os.environ["CXX"] = "g++-9"
 
 __version__ = '0.1'
 
@@ -92,11 +90,26 @@ setuptools.setup(
     author='Giorgio Vinciguerra',
     author_email='i@gvdev.com',
     url='https://github.com/gvinciguerra/PyPGM',
+    license='GPL-3.0',
     description='Python wrapper for the PGM-index',
-    long_description='',
+    long_description=open('README.md').read(),
     ext_modules=ext_modules,
     packages=setuptools.find_packages(),
     setup_requires=['pybind11>=2.5.0'],
     cmdclass={'build_ext': BuildExt},
     zip_safe=False,
+    classifiers=[
+        'License :: OSI Approved :: GPL-3.0 License',
+        'Development Status :: 2 - Pre-Alpha',
+        'Intended Audience :: Developers',
+        'Intended Audience :: Science/Research',
+        'Natural Language :: English',
+        'Programming Language :: C++',
+        'Programming Language :: Python :: 3',
+        'Topic :: Database',
+        'Topic :: Software Development',
+        'Topic :: System',
+        'Topic :: System :: Archiving :: Compression',
+    ],
+    keywords='tree list array btree b+tree vector skiplist container sortedlist sorted set query index data structure',
 )
