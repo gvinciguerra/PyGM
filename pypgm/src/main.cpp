@@ -77,7 +77,7 @@ template <typename K> class PGMWrapper {
 #define FORMAT_TYPE_CASE(c, type)                                                                                      \
     case c:                                                                                                            \
         std::copy_n((type *) info.ptr, n, data);                                                                       \
-        return;
+        break;
 
     PGMWrapper(py::buffer b) {
         py::buffer_info info = b.request();
@@ -105,6 +105,7 @@ template <typename K> class PGMWrapper {
         default:
             throw py::type_error("Unsupported buffer format");
         }
+        build_pgm();
     }
 
     bool contains(K x) const {
