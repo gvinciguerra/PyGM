@@ -4,7 +4,6 @@ import sys
 import tempfile
 
 import setuptools
-from setuptools import Extension, setup
 from setuptools.command.build_ext import build_ext
 
 # os.environ["CC"] = "gcc-9"
@@ -33,9 +32,9 @@ def has_flag(compiler, flag):
 
 
 ext_modules = [
-    Extension(
-        'pypgm',
-        ['src/main.cpp'],
+    setuptools.Extension(
+        'pypgm._pypgm',
+        ['pypgm/src/main.cpp'],
         include_dirs=[
             get_pybind_include(),
             'PGM-Index/include',
@@ -87,7 +86,7 @@ class BuildExt(build_ext):
         build_ext.build_extensions(self)
 
 
-setup(
+setuptools.setup(
     name='pypgm',
     version=__version__,
     author='Giorgio Vinciguerra',
@@ -96,6 +95,7 @@ setup(
     description='Python wrapper for the PGM-index',
     long_description='',
     ext_modules=ext_modules,
+    packages=setuptools.find_packages(),
     setup_requires=['pybind11>=2.5.0'],
     cmdclass={'build_ext': BuildExt},
     zip_safe=False,

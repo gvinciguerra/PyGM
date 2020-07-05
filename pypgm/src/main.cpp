@@ -29,6 +29,16 @@ template <typename K> class PGMWrapper {
         }
     }
 
+    static K implicit_cast(py::handle h) {
+        try {
+            return h.template cast<K>();
+        } catch (const std::exception &e) {
+            if constexpr (std::is_floating_point_v<K>)
+                return (h.template cast<py::float_>()).template cast<K>();
+            return (h.template cast<py::int_>()).template cast<K>();
+        }
+    }
+
   public:
     PGMWrapper() = default;
 
@@ -40,26 +50,61 @@ template <typename K> class PGMWrapper {
         build_pgm();
     }
 
+    PGMWrapper(py::list l) {
+        n = l.size();
+        data = new K[n];
+        for (auto i = 0ull; i < n; ++i)
+            data[i] = implicit_cast(l[i]);
+        if (!std::is_sorted(begin(), end()))
+            std::sort(begin(), end());
+        build_pgm();
+    }
+
     PGMWrapper(py::iterator it) {
         std::vector<K> v;
         for (; it != py::iterator::sentinel(); ++it)
-            v.push_back(it->cast<K>());
+            v.push_back(implicit_cast(*it));
         n = v.size();
         data = new K[n];
         std::copy_n(v.data(), n, data);
+        if (!std::is_sorted(begin(), end()))
+            std::sort(begin(), end());
         build_pgm();
     }
 
     PGMWrapper(K *data, size_t n) : data(data), n(n) { build_pgm(); }
 
-    PGMWrapper(py::array_t<K> a) {
-        auto r = a.template unchecked<1>();
-        n = r.shape(0);
+#define FORMAT_TYPE_CASE(c, type)                                                                                      \
+    case c:                                                                                                            \
+        std::copy_n((type *) info.ptr, n, data);                                                                       \
+        return;
+
+    PGMWrapper(py::buffer b) {
+        py::buffer_info info = b.request();
+        if (info.ndim != 1)
+            throw py::type_error("Incorrect number of dimensions: " + std::to_string(info.ndim) + "; expected 1");
+
+        n = info.shape[0];
         data = new K[n];
-        std::copy_n(r.data(0), n, data);
-        if (!std::is_sorted(begin(), end()))
-            std::sort(begin(), end());
-        build_pgm();
+        switch (info.format[0]) {
+            FORMAT_TYPE_CASE('c', char);
+            FORMAT_TYPE_CASE('b', signed char);
+            FORMAT_TYPE_CASE('B', unsigned char);
+            FORMAT_TYPE_CASE('h', short);
+            FORMAT_TYPE_CASE('H', unsigned short);
+            FORMAT_TYPE_CASE('i', int);
+            FORMAT_TYPE_CASE('I', unsigned int);
+            FORMAT_TYPE_CASE('l', long);
+            FORMAT_TYPE_CASE('L', unsigned long);
+            FORMAT_TYPE_CASE('q', long long);
+            FORMAT_TYPE_CASE('Q', unsigned long long);
+            FORMAT_TYPE_CASE('n', ssize_t);
+            FORMAT_TYPE_CASE('N', size_t);
+            FORMAT_TYPE_CASE('f', float);
+            FORMAT_TYPE_CASE('d', double);
+        default:
+            throw py::type_error("Unsupported buffer format");
+        }
     }
 
     bool contains(K x) const {
@@ -149,14 +194,16 @@ template <typename K> void declare_class(py::module &m, const std::string &name)
     py::class_<PGM>(m, name.c_str())
         .def(py::init<>())
 
-        .def(py::init<py::array_t<K>>())
+        .def(py::init<py::list>())
 
         .def(py::init<py::iterator>())
 
-        // sequence protocol
-        .def("__len__", &PGM::size, "Return the number of values.")
+        .def(py::init<py::buffer>())
 
-        .def("__contains__", &PGM::contains, "Check whether self contains the given value or not.")
+        // sequence protocol
+        .def("__len__", &PGM::size)
+
+        .def("__contains__", &PGM::contains)
 
         .def("__getitem__",
              [](const PGM &p, py::slice slice) -> PGM * {
@@ -187,92 +234,51 @@ template <typename K> void declare_class(py::module &m, const std::string &name)
             "__iter__", [](const PGM &p) { return py::make_iterator(p.begin(), p.end()); }, py::keep_alive<0, 1>())
 
         // query operations
-        .def(
-            "bisect_left",
-            [](const PGM &p, K x) { return std::distance(p.begin(), p.lower_bound(x)); },
-            R"(
-                Locate the insertion point for x to maintain sorted order.
-                
-                If x is already present, the insertion point will be before (to the left of) 
-                any existing entries.
+        .def("bisect_left", [](const PGM &p, K x) { return std::distance(p.begin(), p.lower_bound(x)); })
 
-                Similar to the `bisect` module in the standard library.
-            )",
-            "x"_a)
+        .def("bisect_right", [](const PGM &p, K x) { return std::distance(p.begin(), p.upper_bound(x)); })
 
-        .def(
-            "bisect_right",
-            [](const PGM &p, K x) { return std::distance(p.begin(), p.upper_bound(x)); },
-            R"(
-                Locate the insertion point for x to maintain sorted order.
-                
-                If x is already present, the insertion point will be after (to the right of) 
-                any existing entries.
+        .def("find_lt",
+             [](const PGM &p, K x) {
+                 auto it = p.lower_bound(x);
+                 if (it <= p.begin())
+                     return py::object(py::cast(nullptr));
+                 return py::cast(*(it - 1));
+             })
 
-                Similar to the `bisect` module in the standard library.
-            )",
-            "x"_a)
+        .def("find_le",
+             [](const PGM &p, K x) {
+                 auto it = p.upper_bound(x);
+                 if (it <= p.begin())
+                     return py::object(py::cast(nullptr));
+                 return py::cast(*(it - 1));
+             })
 
-        .def(
-            "find_lt",
-            [](const PGM &p, K x) {
-                auto it = p.lower_bound(x);
-                if (it <= p.begin())
-                    return py::object(py::cast(nullptr));
-                return py::cast(*(it - 1));
-            },
-            "Find the rightmost value less than x.",
-            "x"_a)
+        .def("find_gt",
+             [](const PGM &p, K x) -> py::object {
+                 auto it = p.upper_bound(x);
+                 if (it >= p.end())
+                     return py::object(py::cast(nullptr));
+                 return py::cast(*it);
+             })
 
-        .def(
-            "find_le",
-            [](const PGM &p, K x) {
-                auto it = p.upper_bound(x);
-                if (it <= p.begin())
-                    return py::object(py::cast(nullptr));
-                return py::cast(*(it - 1));
-            },
-            "Find the rightmost value less than or equal to x.",
-            "x"_a)
+        .def("find_ge",
+             [](const PGM &p, K x) -> py::object {
+                 auto it = p.lower_bound(x);
+                 if (it >= p.end())
+                     return py::object(py::cast(nullptr));
+                 return py::cast(*it);
+             })
 
-        .def(
-            "find_gt",
-            [](const PGM &p, K x) -> py::object {
-                auto it = p.upper_bound(x);
-                if (it >= p.end())
-                    return py::object(py::cast(nullptr));
-                return py::cast(*it);
-            },
-            "Find the leftmost value greater than x.",
-            "x"_a)
+        .def("rank", [](const PGM &p, K x) { return std::distance(p.begin(), p.upper_bound(x)); })
 
-        .def(
-            "find_ge",
-            [](const PGM &p, K x) -> py::object {
-                auto it = p.lower_bound(x);
-                if (it >= p.end())
-                    return py::object(py::cast(nullptr));
-                return py::cast(*it);
-            },
-            "Find the leftmost value greater than or equal to x.",
-            "x"_a)
-
-        .def(
-            "rank",
-            [](const PGM &p, K x) { return std::distance(p.begin(), p.upper_bound(x)); },
-            "Number of values less than or equal to x.",
-            "x"_a)
-
-        .def(
-            "count",
-            [](const PGM &p, K x) -> size_t {
-                auto lb = p.lower_bound(x);
-                if (lb >= p.end() || *lb != x)
-                    return 0;
-                return std::distance(lb, p.upper_bound(x));
-            },
-            "Number of values equal to x.",
-            "x"_a)
+        .def("count",
+             [](const PGM &p, K x) -> size_t {
+                 auto lb = p.lower_bound(x);
+                 if (lb >= p.end() || *lb != x)
+                     return 0;
+                 return std::distance(lb, p.upper_bound(x));
+             })
 
         .def(
             "range",
@@ -283,6 +289,7 @@ template <typename K> void declare_class(py::module &m, const std::string &name)
                     return py::make_iterator(std::make_reverse_iterator(r_it), std::make_reverse_iterator(l_it));
                 return py::make_iterator(l_it, r_it);
             },
+            "",
             "a"_a,
             "b"_a,
             "inclusive"_a = std::make_pair(true, true),
@@ -304,52 +311,50 @@ template <typename K> void declare_class(py::module &m, const std::string &name)
                     throw py::value_error(std::to_string(x) + " is not in PGMIndex");
                 return py::cast(index);
             },
-            "Return the first index of x. Raises ValueError if x is not present.",
+            "",
             "x"_a,
             "start"_a = std::nullopt,
             "stop"_a = std::nullopt)
 
         // multiset operations
-        .def(
-            "__add__",
-            [](const PGM &p, py::array_t<K> a) {
-                return p.template set_operation<std::merge>(a, p.size() + a.shape(0));
-            },
-            "Return a new PGMIndex by merging the content of self with the given array.")
+        .def("__add__",
+             [](const PGM &p, py::array_t<K> a) {
+                 return p.template set_operation<std::merge>(a, p.size() + a.shape(0));
+             })
 
-        .def(
-            "__add__",
-            [](const PGM &p, const PGM &q) { return p.template set_operation<std::merge>(q, p.size() + q.size()); },
-            "Return a new PGMIndex by merging the content of self with the given PGMIndex.")
+        .def("__add__",
+             [](const PGM &p, const PGM &q) { return p.template set_operation<std::merge>(q, p.size() + q.size()); })
 
-        .def(
-            "__sub__",
-            [](const PGM &p, py::array_t<K> a) { return p.template set_operation<std::set_difference>(a, p.size()); },
-            "Return a new PGMIndex by removing from self the values found in the given array.")
+        .def("__sub__",
+             [](const PGM &p, py::array_t<K> a) { return p.template set_operation<std::set_difference>(a, p.size()); })
 
-        .def(
-            "__sub__",
-            [](const PGM &p, const PGM &q) { return p.template set_operation<std::set_difference>(q, p.size()); },
-            "Return a new PGMIndex by removing from self the values found in the given PGMIndex.")
+        .def("__sub__",
+             [](const PGM &p, const PGM &q) { return p.template set_operation<std::set_difference>(q, p.size()); })
 
-        .def(
-            "drop_duplicates",
-            [](const PGM &p) {
-                auto tmp = new K[p.size()];
-                auto size = (size_t) std::distance(tmp, std::unique_copy(p.begin(), p.end(), tmp));
+        .def("drop_duplicates",
+             [](const PGM &p) {
+                 auto tmp = new K[p.size()];
+                 auto size = (size_t) std::distance(tmp, std::unique_copy(p.begin(), p.end(), tmp));
 
-                if (size == p.size())
-                    return new PGM(tmp, size);
+                 if (size == p.size())
+                     return new PGM(tmp, size);
 
-                auto data = new K[size];
-                std::copy_n(tmp, size, data);
-                delete[] tmp;
-                return new PGM(data, size);
-            },
-            "Return self with duplicate values removed.")
+                 auto data = new K[size];
+                 std::copy_n(tmp, size, data);
+                 delete[] tmp;
+                 return new PGM(data, size);
+             })
 
         // other methods
-        .def("stats", &PGM::stats, "Return a dict containing stats about self, such as the occupied space in bytes.");
+        .def("stats", &PGM::stats);
 }
 
-PYBIND11_MODULE(pypgm, m) { declare_class<int64_t>(m, "PGMIndex"); }
+PYBIND11_MODULE(_pypgm, m) {
+    m.attr("__name__") = "pypgm._pypgm";
+    declare_class<uint32_t>(m, "PGMIndexUInt32");
+    declare_class<int32_t>(m, "PGMIndexInt32");
+    declare_class<int64_t>(m, "PGMIndexInt64");
+    declare_class<uint64_t>(m, "PGMIndexUInt64");
+    declare_class<float>(m, "PGMIndexFloat");
+    declare_class<double>(m, "PGMIndexDouble");
+}
