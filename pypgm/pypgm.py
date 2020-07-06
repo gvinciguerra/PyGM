@@ -30,6 +30,10 @@ class SortedContainer(abc.ABC):
             raise TypeError('Unsupported typecode')
 
     @staticmethod
+    def _trygetimpl(o):
+        return o._impl if isinstance(o, SortedContainer) else o
+
+    @staticmethod
     def _initwitharg(self, arg, typecode, drop_duplicates):
         if arg is None or (hasattr(arg, '__len__') and len(arg) == 0):
             self._typecode = 'b'
@@ -318,7 +322,8 @@ class SortedList(SortedContainer):
         Returns:
             SortedList: new list with the merged elements
         """
-        return SortedList(self._impl.merge(other), self._typecode)
+        o = SortedContainer._trygetimpl(other)
+        return SortedList(self._impl.merge(o), self._typecode)
 
     def __sub__(self, other):
         """Return a new ``SortedList`` by removing from ``self`` the elements
@@ -338,7 +343,8 @@ class SortedList(SortedContainer):
         Returns:
             SortedList: new list with the elements in the difference
         """
-        return SortedList(self._impl.difference(other), self._typecode)
+        o = SortedContainer._trygetimpl(other)
+        return SortedList(self._impl.difference(o), self._typecode)
 
     def drop_duplicates(self):
         """Return ``self`` with duplicate elements removed.
@@ -423,7 +429,8 @@ class SortedSet(SortedContainer):
         Returns:
             SortedSet: new set with the elements in the union
         """
-        return SortedSet(self._impl.union(other), self._typecode)
+        o = SortedContainer._trygetimpl(other)
+        return SortedSet(self._impl.union(o), self._typecode)
 
     def difference(self, other):
         """Return a ``SortedSet` with the elements of ``self`` not found in
@@ -437,7 +444,8 @@ class SortedSet(SortedContainer):
         Returns:
             SortedSet: new set with the elements in the difference
         """
-        return SortedSet(self._impl.difference(other), self._typecode)
+        o = SortedContainer._trygetimpl(other)
+        return SortedSet(self._impl.difference(o), self._typecode)
 
     def symmetric_difference(self, other):
         """Return a ``SortedSet` with the elements found in either ``self`` or
@@ -451,7 +459,8 @@ class SortedSet(SortedContainer):
         Returns:
             SortedSet: new set with the elements in the symmetric difference
         """
-        return SortedSet(self._impl.symmetric_difference(other), self._typecode)
+        o = SortedContainer._trygetimpl(other)
+        return SortedSet(self._impl.symmetric_difference(o), self._typecode)
 
     def intersection(self, other):
         """Return a ``SortedSet`` with the elements found in both ``self`` and
@@ -463,4 +472,5 @@ class SortedSet(SortedContainer):
         Returns:
             SortedSet: new set with the elements in the intersection
         """
-        return SortedSet(self._impl.intersection(other), self._typecode)
+        o = SortedContainer._trygetimpl(other)
+        return SortedSet(self._impl.intersection(o), self._typecode)
