@@ -1,5 +1,10 @@
-import os
+__all__ = ['SortedList', 'SortedSet']
+__version__ = '0.1'
+__author__ = 'Giorgio Vinciguerra'
 
-from .pypgm import SortedList, SortedSet
+import os as _os
 
-os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
+from .sortedlist import SortedList
+from .sortedset import SortedSet
+
+_os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
