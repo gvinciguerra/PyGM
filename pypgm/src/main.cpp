@@ -124,64 +124,69 @@ template <typename K> class PGMWrapper {
     PGMWrapper(py::list l, bool drop_duplicates) {
         n = l.size();
         data = new K[n];
-        duplicates = false;
 
-        auto j = 0ull;
+        size_t j;
         auto sorted = true;
+        auto it = l.begin();
         if (n > 0)
-            data[j++] = implicit_cast(l[0]);
-        for (auto i = 1ull; i < n; ++i) {
-            auto x = K(implicit_cast(l[i]));
-            if (x == data[j - 1]) {
-                if (drop_duplicates)
-                    continue;
-                duplicates = true;
-            }
+            data[0] = implicit_cast(*it++);
+        for (j = 1; it != l.end(); ++it, ++j) {
+            auto x = implicit_cast(*it);
             if (x < data[j - 1])
                 sorted = false;
-            data[j++] = x;
-        }
-
-        if (j < n) {
-            auto tmp = data;
-            n = j;
-            data = new K[n];
-            std::copy_n(tmp, n, data);
-            delete[] tmp;
+            data[j] = x;
         }
 
         if (!sorted)
-            std::sort(begin(), end());
+            std::sort(data, data + j);
+
+        if (drop_duplicates) {
+            duplicates = false;
+            j = std::distance(data, std::unique(data, data + j));
+            if (j < n) {
+                auto tmp = data;
+                n = j;
+                data = new K[n];
+                std::copy_n(tmp, n, data);
+                delete[] tmp;
+            }
+        } else
+            duplicates = true;
+
         build_pgm();
     }
 
     PGMWrapper(py::iterator it, bool drop_duplicates) {
-        duplicates = false;
         auto sorted = true;
-
         std::vector<K> v;
         v.reserve(8192);
-        if (it != py::iterator::sentinel()) {
-            v.push_back(implicit_cast(*it));
-            ++it;
-        }
         for (; it != py::iterator::sentinel(); ++it) {
-            auto x = K(implicit_cast(*it));
-            if (x == v.back()) {
-                if (drop_duplicates)
-                    continue;
-                duplicates = true;
-            }
+            auto x = implicit_cast(*it);
             if (x < v.back())
                 sorted = false;
             v.push_back(x);
         }
 
+        if (!sorted)
+            std::sort(v.begin(), v.end());
+
         n = v.size();
         data = new K[n];
-        std::copy_n(v.data(), n, data);
-        if (!sorted)
-            std::sort(begin(), end());
+        if (drop_duplicates) {
+            auto j = (size_t) std::distance(data, std::unique_copy(v.begin(), v.end(), data));
+            duplicates = false;
+            if (j < n) {
+                auto tmp = data;
+                n = j;
+                data = new K[n];
+                std::copy_n(tmp, n, data);
+                delete[] tmp;
+            }
+        } else {
+            duplicates = true;
+            std::copy(v.begin(), v.end(), data);
+        }
+
         build_pgm();
     }
 
@@ -272,7 +277,7 @@ template <typename K> class PGMWrapper {
         return std::upper_bound(it + (step / 2), std::min(it + step, end()), x);
     }
 
-    // TODO: set_operation taking a py::buffer
+    // TODO: set_operation taking a py::buffer and a py::iterator
     template <set_fun F>
     PGMWrapper *set_operation(const py::array_t<K> &a, size_t out_size_hint, bool generates_duplicates) const {
         auto r = a.template unchecked<1>();
@@ -335,6 +340,7 @@ template <typename K> class PGMWrapper {
     }
 
     template <typename Container> PGMWrapper *set_intersection(const Container &c) {
+        assert(!has_duplicates()); // otherwise std::set_intersection may output duplicates
         return set_operation<std::set_intersection>(c, std::min(size(), get_size(c)), false);
     }
 
