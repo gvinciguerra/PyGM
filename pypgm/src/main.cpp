@@ -63,6 +63,17 @@ OutputIt set_unique_symmetric_difference(InputIt1 first1, InputIt1 last1, InputI
     return std::unique_copy(first2, last2, out);
 }
 
+template <typename K>
+void shrink_if_needed(K *&a, size_t &capacity, size_t size) {
+    if (size < capacity) {
+        auto tmp = a;
+        a = new K[size];
+        capacity = size;
+        std::copy_n(tmp, size, a);
+        delete[] tmp;
+    }
+}
+
 template <typename K> class PGMWrapper {
     K *data;
     size_t n;
@@ -104,13 +115,7 @@ template <typename K> class PGMWrapper {
             n = p.size();
             data = new K[n];
             auto m = (size_t) std::distance(data, std::unique_copy(p.begin(), p.end(), data));
-            if (m < n) {
-                auto tmp = data;
-                n = m;
-                data = new K[m];
-                std::copy_n(tmp, m, data);
-                delete[] tmp;
-            }
+            shrink_if_needed(data, n, m);
             duplicates = false;
             build_pgm();
             return;
@@ -145,13 +150,7 @@ template <typename K> class PGMWrapper {
         if (drop_duplicates) {
             duplicates = false;
             j = std::distance(data, std::unique(data, data + j));
-            if (j < n) {
-                auto tmp = data;
-                n = j;
-                data = new K[n];
-                std::copy_n(tmp, n, data);
-                delete[] tmp;
-            }
+            shrink_if_needed(data, n, j);
         } else
             duplicates = true;
 
@@ -175,15 +174,9 @@ template <typename K> class PGMWrapper {
         n = v.size();
         data = new K[n];
         if (drop_duplicates) {
-            auto j = (size_t) std::distance(data, std::unique_copy(v.begin(), v.end(), data));
+            auto m = (size_t) std::distance(data, std::unique_copy(v.begin(), v.end(), data));
             duplicates = false;
-            if (j < n) {
-                auto tmp = data;
-                n = j;
-                data = new K[n];
-                std::copy_n(tmp, n, data);
-                delete[] tmp;
-            }
+            shrink_if_needed(data, n, m);
         } else {
             duplicates = true;
             std::copy(v.begin(), v.end(), data);
@@ -201,11 +194,6 @@ template <typename K> class PGMWrapper {
             data[j++] = K(ptr[0]);                                                                                     \
         for (auto i = 1ull; i < n; ++i) {                                                                              \
             auto x = K(ptr[i]);                                                                                        \
-            if (x == data[j - 1]) {                                                                                    \
-                if (drop_duplicates)                                                                                   \
-                    continue;                                                                                          \
-                duplicates = true;                                                                                     \
-            }                                                                                                          \
             if (x < data[j - 1])                                                                                       \
                 sorted = false;                                                                                        \
             data[j++] = x;                                                                                             \
@@ -220,7 +208,6 @@ template <typename K> class PGMWrapper {
 
         n = info.shape[0];
         data = new K[n];
-        duplicates = false;
         auto j = 0ull;
         auto sorted = true;
 
@@ -244,16 +231,16 @@ template <typename K> class PGMWrapper {
             throw py::type_error("Unsupported buffer format");
         }
 
-        if (j < n) {
-            auto tmp = data;
-            n = j;
-            data = new K[n];
-            std::copy_n(tmp, n, data);
-            delete[] tmp;
-        }
-
         if (!sorted)
-            std::sort(begin(), end());
+            std::sort(data, data + j);
+
+        if (drop_duplicates) {
+            duplicates = false;
+            j = std::distance(data, std::unique(data, data + j));
+            shrink_if_needed(data, n, j);
+        } else
+            duplicates = true;
+
         build_pgm();
     }
 
@@ -301,28 +288,16 @@ template <typename K> class PGMWrapper {
         }
 
         auto out_size = (size_t) std::distance(tmp_out, tmp_out_end);
-        if (out_size == out_size_hint)
-            return new PGMWrapper<K>(tmp_out, out_size, generates_duplicates);
-
-        auto out = new K[out_size];
-        std::copy_n(tmp_out, out_size, out);
-        delete[] tmp_out;
-        return new PGMWrapper<K>(out, out_size, generates_duplicates);
+        shrink_if_needed(tmp_out, out_size_hint, out_size);
+        return new PGMWrapper<K>(tmp_out, out_size, generates_duplicates);
     }
 
     template <set_fun F>
     PGMWrapper *set_operation(const PGMWrapper<K> &q, size_t out_size_hint, size_t generates_duplicates) const {
         auto tmp_out = new K[out_size_hint];
-        auto tmp_out_end = F(begin(), end(), q.begin(), q.end(), tmp_out);
-        auto out_size = (size_t) std::distance(tmp_out, tmp_out_end);
-
-        if (out_size == out_size_hint)
-            return new PGMWrapper<K>(tmp_out, out_size, generates_duplicates);
-
-        auto out = new K[out_size];
-        std::copy_n(tmp_out, out_size, out);
-        delete[] tmp_out;
-        return new PGMWrapper<K>(out, out_size, generates_duplicates);
+        auto out_size = (size_t) std::distance(tmp_out, F(begin(), end(), q.begin(), q.end(), tmp_out));
+        shrink_if_needed(tmp_out, out_size_hint, out_size);
+        return new PGMWrapper<K>(tmp_out, out_size, generates_duplicates);
     }
 
     template <typename Container> PGMWrapper *merge(const Container &c) {
@@ -518,15 +493,10 @@ template <typename K> void declare_class(py::module &m, const std::string &name)
 
         .def("drop_duplicates",
              [](const PGM &p) {
-                 auto tmp = new K[p.size()];
-                 auto size = (size_t) std::distance(tmp, std::unique_copy(p.begin(), p.end(), tmp));
-
-                 if (size == p.size())
-                     return new PGM(tmp, size, false);
-
-                 auto data = new K[size];
-                 std::copy_n(tmp, size, data);
-                 delete[] tmp;
+                 auto capacity = p.size();
+                 auto data = new K[capacity];
+                 auto size = (size_t) std::distance(data, std::unique_copy(p.begin(), p.end(), data));
+                 shrink_if_needed(data, capacity, size);
                  return new PGM(data, size, false);
              })
 
