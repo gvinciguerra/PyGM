@@ -1,4 +1,6 @@
 import collections.abc
+from operator import eq, ge, gt, le, lt, ne
+from textwrap import dedent
 
 from . import _pypgm
 
@@ -104,7 +106,7 @@ class SortedContainer(collections.abc.Sequence):
     def __getitem__(self, i):
         """Return the element at position ``i``.
 
-        ``self.__getitem__(i)`` <==> ``self[i]`` 
+        ``self.__getitem__(i)`` <==> ``self[i]``
 
         Args:
             i (int or slice): index of the element
@@ -224,7 +226,7 @@ class SortedContainer(collections.abc.Sequence):
         Args:
             a: lower bound value
             b: upper bound value
-            inclusive (tuple[bool, bool], optional): a pair of boolean 
+            inclusive (tuple[bool, bool], optional): a pair of boolean
                 indicating whether the bounds are inclusive (``True``) or
                 exclusive (``False``). Defaults to ``(True, True)``.
             reverse (bool, optional): if ``True`` return an reverse iterator.
@@ -351,6 +353,52 @@ class SortedList(SortedContainer):
             SortedList: new list without duplicates
         """
         return SortedList(self._impl.drop_duplicates(), self._typecode)
+
+
+    def _make_cmp(op, symbol, doc):
+        # credits: https://github.com/grantjenks/python-sortedcontainers/
+        def comparer(self, other):
+            if not isinstance(other, collections.abc.Sequence):
+                return NotImplemented
+
+            len_self = len(self)
+            len_other = len(other)
+
+            if len_self != len_other:
+                if op is eq:
+                    return False
+                if op is ne:
+                    return True
+
+            for x, y in zip(self, other):
+                if x != y:
+                    return op(x, y)
+
+            return op(len_self, len_other)
+
+        comparer.__name__ = '__{0}__'.format(op)
+        doc_str = """Return ``True`` if and only if ``self`` is {0} ``other``.
+
+        ``self.__{1}__(other)`` <==> ``self {2} other``
+
+        Comparisons use the `lexicographical order <https://docs.python.org/3/tutorial/datastructures.html#comparing-sequences-and-other-types>`_.
+
+        Args:
+            other: a sequence
+
+        Returns:
+            ``True`` if sorted list is {0} `other`
+        """
+        comparer.__doc__ = dedent(doc_str.format(doc, op.__name__, symbol))
+        return comparer
+
+    __eq__ = _make_cmp(eq, '==', 'equal to')
+    __ne__ = _make_cmp(ne, '!=', 'not equal to')
+    __lt__ = _make_cmp(lt, '<', 'less than')
+    __gt__ = _make_cmp(gt, '>', 'greater than')
+    __le__ = _make_cmp(le, '<=', 'less than or equal to')
+    __ge__ = _make_cmp(ge, '>=', 'greater than or equal to')
+    _make_cmp = staticmethod(_make_cmp)
 
 
 class SortedSet(SortedContainer):
