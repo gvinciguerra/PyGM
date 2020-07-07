@@ -474,32 +474,22 @@ template <typename K> void declare_class(py::module &m, const std::string &name)
                     return py::make_iterator(std::make_reverse_iterator(r_it), std::make_reverse_iterator(l_it));
                 return py::make_iterator(l_it, r_it);
             },
-            "",
-            "a"_a,
-            "b"_a,
-            "inclusive"_a = std::make_pair(true, true),
-            "reverse"_a = false,
             py::keep_alive<0, 1>())
 
         // list-like operations
-        .def(
-            "index",
-            [](const PGM &p, K x, std::optional<ssize_t> start, std::optional<ssize_t> stop) -> py::object {
-                auto it = p.lower_bound(x);
-                auto index = (size_t) std::distance(p.begin(), it);
+        .def("index",
+             [](const PGM &p, K x, std::optional<ssize_t> start, std::optional<ssize_t> stop) -> py::object {
+                 auto it = p.lower_bound(x);
+                 auto index = (size_t) std::distance(p.begin(), it);
 
-                size_t left, right, step, length;
-                auto slice = py::slice(start.value_or(0), stop.value_or(p.size()), 1);
-                slice.compute(p.size(), &left, &right, &step, &length);
+                 size_t left, right, step, length;
+                 auto slice = py::slice(start.value_or(0), stop.value_or(p.size()), 1);
+                 slice.compute(p.size(), &left, &right, &step, &length);
 
-                if (it >= p.end() || *it != x || index < left || index > right)
-                    throw py::value_error(std::to_string(x) + " is not in PGMIndex");
-                return py::cast(index);
-            },
-            "",
-            "x"_a,
-            "start"_a = std::nullopt,
-            "stop"_a = std::nullopt)
+                 if (it >= p.end() || *it != x || index < left || index > right)
+                     throw py::value_error(std::to_string(x) + " is not in PGMIndex");
+                 return py::cast(index);
+             })
 
         // multiset operations
         .def("merge", &PGM::template merge<const PGM &>)
