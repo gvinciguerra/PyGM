@@ -417,9 +417,15 @@ template <typename K> void declare_class(py::module &m, const std::string &name)
                  return p[i];
              })
 
-        // iterator protocol
         .def(
             "__iter__", [](const PGM &p) { return py::make_iterator(p.begin(), p.end()); }, py::keep_alive<0, 1>())
+
+        .def(
+            "__reversed__",
+            [](const PGM &p) {
+                return py::make_iterator(std::make_reverse_iterator(p.begin()), std::make_reverse_iterator(p.end()));
+            },
+            py::keep_alive<0, 1>())
 
         // query operations
         .def("bisect_left", [](const PGM &p, K x) { return std::distance(p.begin(), p.lower_bound(x)); })

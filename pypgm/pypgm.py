@@ -1,17 +1,9 @@
-import abc
 import collections.abc
 
 from . import _pypgm
 
 
-def is_documented_by(original):
-    def wrapper(target):
-        target.__doc__ = original.__doc__
-        return target
-    return wrapper
-
-
-class SortedContainer(abc.ABC):
+class SortedContainer(collections.abc.Sequence):
     @staticmethod
     def _fromtypecode(arg, typecode, drop_duplicates):
         if typecode in 'BHI':
@@ -85,54 +77,6 @@ class SortedContainer(abc.ABC):
 
         raise TypeError('Unsupported argument type')
 
-    def stats(self):
-        """Return a dict containing statistics about self.
-
-        The keys are:
-
-        * ``'data size'`` size of the elements in bytes
-        * ``'index size'`` size of the index in bytes
-        * ``'height'`` number of levels of the index
-        * ``'leaf segments'`` number of segments in the last level of the index
-        * ``'typecode'`` type of the elements (see the `array` module)
-
-        Returns:
-            dict[str, object]: a dictionary with stats about self
-        """
-        d = self._impl.stats()
-        d['typecode'] = self._typecode
-        return d
-
-    def __repr__(self):
-        """Return a string representation of self.
-
-        ``self.__repr__()`` <==> ``repr(self)``
-
-        Returns:
-            str: repr(self)
-        """
-        d = self._impl.stats()
-        data, index = d['data size'], d['index size']
-        name = self.__class__.__name__
-        indent = ' ' * (len(name) + 1)
-        preview = ''
-        if len(self) < 6:
-            preview += repr(list(self._impl))
-        else:
-            fmt_args = (self[0], self[1], self[2], self[-2], self[-1])
-            if self._typecode in 'fd':
-                preview += '[%g, %g, %g, ..., %g, %g]' % fmt_args
-            else:
-                preview += '[%d, %d, %d, ..., %d, %d]' % fmt_args
-        return '%s(%s,\n%stypecode=%s, bytes=(data=%d,index=%d,total=%d))' % (
-            name, preview, indent, self._typecode, data, index, data + index)
-
-
-class SortedList(SortedContainer):
-
-    def __init__(self, arg, typecode=None):
-        SortedContainer._initwitharg(self, arg, typecode, False)
-
     def __len__(self):
         """Return the number of elements in ``self``.
 
@@ -171,9 +115,6 @@ class SortedList(SortedContainer):
         if isinstance(i, slice):
             return SortedList(self._impl.__getitem__(i), self._typecode)
         return self._impl.__getitem__(i)
-
-    def __iter__(self):
-        return self._impl.__iter__()
 
     def bisect_left(self, x):
         """Locate the insertion point for ``x`` to maintain sorted order.
@@ -214,7 +155,8 @@ class SortedList(SortedContainer):
             x: value to compare the elements to
 
         Returns:
-            value of the rightmost element ``< x``
+            value of the rightmost element ``< x``, or ``None`` if no such
+            element is found
         """
         return self._impl.find_lt(x)
 
@@ -225,7 +167,8 @@ class SortedList(SortedContainer):
             x: value to compare the elements to
 
         Returns:
-            value of the rightmost element ``<= x``
+            value of the rightmost element ``<= x``, or ``None`` if no such
+            element is found
         """
         return self._impl.find_le(x)
 
@@ -236,7 +179,8 @@ class SortedList(SortedContainer):
             x: value to compare the elements to
 
         Returns:
-            value of the leftmost element ``> x``
+            value of the leftmost element ``> x``, or ``None`` if no such
+            element is found
         """
         return self._impl.find_gt(x)
 
@@ -247,7 +191,8 @@ class SortedList(SortedContainer):
             x: value to compare the elements to
 
         Returns:
-            value of the leftmost element ``>= x``
+            value of the leftmost element ``>= x``, or ``None`` if no such
+            element is found
         """
         return self._impl.find_ge(x)
 
@@ -308,6 +253,59 @@ class SortedList(SortedContainer):
         """
         return self._impl.index(x, start, stop)
 
+    def stats(self):
+        """Return a dict containing statistics about self.
+
+        The keys are:
+
+        * ``'data size'`` size of the elements in bytes
+        * ``'index size'`` size of the index in bytes
+        * ``'height'`` number of levels of the index
+        * ``'leaf segments'`` number of segments in the last level of the index
+        * ``'typecode'`` type of the elements (see the `array` module)
+
+        Returns:
+            dict[str, object]: a dictionary with stats about self
+        """
+        d = self._impl.stats()
+        d['typecode'] = self._typecode
+        return d
+
+    def __iter__(self):
+        return self._impl.__iter__()
+
+    def __reversed__(self):
+        return self._impl.__reversed__()
+
+    def __repr__(self):
+        """Return a string representation of self.
+
+        ``self.__repr__()`` <==> ``repr(self)``
+
+        Returns:
+            str: repr(self)
+        """
+        d = self._impl.stats()
+        data, index = d['data size'], d['index size']
+        name = self.__class__.__name__
+        indent = ' ' * (len(name) + 1)
+        preview = ''
+        if len(self) < 6:
+            preview += repr(list(self._impl))
+        else:
+            fmt_args = (self[0], self[1], self[2], self[-2], self[-1])
+            if self._typecode in 'fd':
+                preview += '[%g, %g, %g, ..., %g, %g]' % fmt_args
+            else:
+                preview += '[%d, %d, %d, ..., %d, %d]' % fmt_args
+        return '%s(%s,\n%stypecode=%s, bytes=(data=%d,index=%d,total=%d))' % (
+            name, preview, indent, self._typecode, data, index, data + index)
+
+
+class SortedList(SortedContainer):
+    def __init__(self, arg=None, typecode=None):
+        SortedContainer._initwitharg(self, arg, typecode, False)
+
     def __add__(self, other):
         """Return a new ``SortedList`` by merging the elements of ``self``
         with ``other``.
@@ -356,66 +354,8 @@ class SortedList(SortedContainer):
 
 
 class SortedSet(SortedContainer):
-    def __init__(self, arg, typecode=None):
+    def __init__(self, arg=None, typecode=None):
         SortedContainer._initwitharg(self, arg, typecode, True)
-
-    @is_documented_by(SortedList.__len__)
-    def __len__(self):
-        return self._impl.__len__()
-
-    @is_documented_by(SortedList.__contains__)
-    def __contains__(self, x):
-        return self._impl.__contains__(x)
-
-    @is_documented_by(SortedList.__getitem__)
-    def __getitem__(self, i):
-        if isinstance(i, slice):
-            return SortedSet(self._impl.__getitem__(i), self._typecode)
-        return self._impl.__getitem__(i)
-
-    @is_documented_by(SortedList.__iter__)
-    def __iter__(self):
-        return self._impl.__iter__()
-
-    @is_documented_by(SortedList.bisect_left)
-    def bisect_left(self, x):
-        return self._impl.bisect_left(x)
-
-    @is_documented_by(SortedList.bisect_right)
-    def bisect_right(self, x):
-        return self._impl.bisect_right(x)
-
-    @is_documented_by(SortedList.find_lt)
-    def find_lt(self, x):
-        return self._impl.find_lt(x)
-
-    @is_documented_by(SortedList.find_le)
-    def find_le(self, x):
-        return self._impl.find_le(x)
-
-    @is_documented_by(SortedList.find_gt)
-    def find_gt(self, x):
-        return self._impl.find_gt(x)
-
-    @is_documented_by(SortedList.find_ge)
-    def find_ge(self, x):
-        return self._impl.find_ge(x)
-
-    @is_documented_by(SortedList.rank)
-    def rank(self, x):
-        return self._impl.rank(x)
-
-    @is_documented_by(SortedList.count)
-    def count(self, x):
-        return self._impl.count(x)
-
-    @is_documented_by(SortedList.range)
-    def range(self, a, b, inclusive=(True, True), reverse=False):
-        return self._impl.range(a, b, inclusive, reverse)
-
-    @is_documented_by(SortedList.index)
-    def index(self, x, start=None, stop=None):
-        return self._impl.index(x, start, stop)
 
     def union(self, other):
         """Return a new ``SortedSet`` with the elements in one or both ``self``
