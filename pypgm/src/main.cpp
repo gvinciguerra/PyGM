@@ -90,6 +90,8 @@ template <typename K> class PGMWrapper {
         }
     }
 
+    static K implicit_cast(std::pair<py::handle, py::handle> h) { return implicit_cast(h.first); }
+
     template <typename C> static size_t get_size(const C &c) { return c.size(); }
 
     static size_t get_size(const py::array_t<K> &a) { return a.shape(0); }
@@ -121,7 +123,7 @@ template <typename K> class PGMWrapper {
         std::copy_n(p.data, n, data);
     }
 
-    PGMWrapper(py::list l, bool drop_duplicates) {
+    template <typename PyClass> PGMWrapper(PyClass l, bool drop_duplicates) {
         n = l.size();
         data = new K[n];
 
@@ -370,14 +372,13 @@ template <typename K> void declare_class(py::module &m, const std::string &name)
     using PGM = PGMWrapper<K>;
     py::class_<PGM>(m, name.c_str())
         .def(py::init<>())
-
         .def(py::init<const PGM &, bool>())
-
+        .def(py::init<py::set, bool>())
         .def(py::init<py::list, bool>())
-
-        .def(py::init<py::iterator, bool>())
-
+        .def(py::init<py::dict, bool>())
+        .def(py::init<py::tuple, bool>())
         .def(py::init<py::buffer, bool>())
+        .def(py::init<py::iterator, bool>())
 
         // sequence protocol
         .def("__len__", &PGM::size)
