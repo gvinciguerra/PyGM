@@ -393,8 +393,11 @@ template <typename K> void declare_class(py::module &m, const std::string &name)
 
                  bool duplicates = false;
                  auto data = new K[length];
-                 if (length > 0)
-                     data[0] = p[0];
+                 if (length > 0) {
+                     data[0] = p[start];
+                     start += step;
+                 }
+
                  for (size_t i = 1; i < length; ++i) {
                      data[i] = p[start];
                      start += step;
