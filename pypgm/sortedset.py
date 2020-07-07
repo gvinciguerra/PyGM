@@ -1,9 +1,26 @@
+import collections.abc
+
 from .sortedcontainer import SortedContainer
 
 
 class SortedSet(SortedContainer):
     def __init__(self, arg=None, typecode=None):
         SortedContainer._initwitharg(self, arg, typecode, True)
+
+    def __getitem__(self, i):
+        """Return the element at position ``i``.
+
+        ``self.__getitem__(i)`` <==> ``self[i]``
+
+        Args:
+            i (int or slice): index of the element
+
+        Returns:
+            element at position ``i``
+        """
+        if isinstance(i, slice):
+            return SortedSet(self._impl.__getitem__(i), self._typecode)
+        return self._impl.__getitem__(i)
 
     def union(self, other):
         """Return a new ``SortedSet`` with the elements in one or both ``self``

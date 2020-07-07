@@ -101,21 +101,6 @@ class SortedContainer(collections.abc.Sequence):
         """
         return self._impl.__contains__(x)
 
-    def __getitem__(self, i):
-        """Return the element at position ``i``.
-
-        ``self.__getitem__(i)`` <==> ``self[i]``
-
-        Args:
-            i (int or slice): index of the element
-
-        Returns:
-            element at position ``i``
-        """
-        if isinstance(i, slice):
-            return SortedList(self._impl.__getitem__(i), self._typecode)
-        return self._impl.__getitem__(i)
-
     def bisect_left(self, x):
         """Locate the insertion point for ``x`` to maintain sorted order.
 
