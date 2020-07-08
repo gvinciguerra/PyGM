@@ -270,10 +270,6 @@ class SortedContainer(collections.abc.Sequence):
         Returns:
             str: repr(self)
         """
-        d = self._impl.stats()
-        data, index = d['data size'], d['index size']
-        name = self.__class__.__name__
-        indent = ' ' * (len(name) + 1)
         preview = ''
         if len(self) < 6:
             preview += repr(list(self._impl))
@@ -283,5 +279,4 @@ class SortedContainer(collections.abc.Sequence):
                 preview += '[%g, %g, %g, ..., %g, %g]' % fmt_args
             else:
                 preview += '[%d, %d, %d, ..., %d, %d]' % fmt_args
-        return '%s(%s,\n%stypecode=%s, bytes=(data=%d,index=%d,total=%d))' % (
-            name, preview, indent, self._typecode, data, index, data + index)
+        return '%s(%s)' % (self.__class__.__name__, preview)
