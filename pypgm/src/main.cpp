@@ -63,8 +63,7 @@ OutputIt set_unique_symmetric_difference(InputIt1 first1, InputIt1 last1, InputI
     return std::unique_copy(first2, last2, out);
 }
 
-template <typename K>
-void shrink_if_needed(K *&a, size_t &capacity, size_t size) {
+template <typename K> void shrink_if_needed(K *&a, size_t &capacity, size_t size) {
     if (size < capacity) {
         auto tmp = a;
         a = new K[size];
@@ -360,37 +359,41 @@ template <typename K> void declare_class(py::module &m, const std::string &name)
 
         .def("__contains__", &PGM::contains)
 
-        .def("__getitem__",
-             [](const PGM &p, py::slice slice) -> PGM * {
-                 size_t start, stop, step, length;
-                 if (!slice.compute(p.size(), &start, &stop, &step, &length))
-                     throw py::error_already_set();
+        .def(
+            "__getitem__",
+            [](const PGM &p, py::slice slice) -> PGM * {
+                size_t start, stop, step, length;
+                if (!slice.compute(p.size(), &start, &stop, &step, &length))
+                    throw py::error_already_set();
 
-                 bool duplicates = false;
-                 auto data = new K[length];
-                 if (length > 0) {
-                     data[0] = p[start];
-                     start += step;
-                 }
+                bool duplicates = false;
+                auto data = new K[length];
+                if (length > 0) {
+                    data[0] = p[start];
+                    start += step;
+                }
 
-                 for (size_t i = 1; i < length; ++i) {
-                     data[i] = p[start];
-                     start += step;
-                     if (data[i] == data[i - 1])
-                         duplicates = true;
-                 }
+                for (size_t i = 1; i < length; ++i) {
+                    data[i] = p[start];
+                    start += step;
+                    if (data[i] == data[i - 1])
+                        duplicates = true;
+                }
 
-                 return new PGM(data, length, duplicates);
-             })
+                return new PGM(data, length, duplicates);
+            },
+            py::arg("slice").noconvert())
 
-        .def("__getitem__",
-             [](const PGM &p, ssize_t i) {
-                 if (i < 0)
-                     i += p.size();
-                 if (i < 0 || (size_t) i >= p.size())
-                     throw py::index_error();
-                 return p[i];
-             })
+        .def(
+            "__getitem__",
+            [](const PGM &p, ssize_t i) {
+                if (i < 0)
+                    i += p.size();
+                if (i < 0 || (size_t) i >= p.size())
+                    throw py::index_error();
+                return p[i];
+            },
+            py::arg("i").noconvert())
 
         .def(
             "__iter__", [](const PGM &p) { return py::make_iterator(p.begin(), p.end()); }, py::keep_alive<0, 1>())
@@ -488,6 +491,7 @@ template <typename K> void declare_class(py::module &m, const std::string &name)
         .def("union", &PGM::template set_union<const PGM &>)
         .def("union", &PGM::template set_union<const py::array_t<K>>)
 
+        // .def("intersection", &PGM::set_intersection)
         .def("intersection", &PGM::template set_intersection<const PGM &>)
         .def("intersection", &PGM::template set_intersection<const py::array_t<K>>)
 
