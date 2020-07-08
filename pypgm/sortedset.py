@@ -34,8 +34,8 @@ class SortedSet(SortedContainer):
         Returns:
             SortedSet: new set with the elements in the union
         """
-        o = SortedContainer._trygetimpl(other)
-        return SortedSet(self._impl.union(o), self._typecode)
+        args = SortedContainer._impl_or_iter(other)
+        return SortedSet(self._impl.union(*args), self._typecode)
 
     def difference(self, other):
         """Return a ``SortedSet` with the elements of ``self`` not found in
@@ -49,8 +49,8 @@ class SortedSet(SortedContainer):
         Returns:
             SortedSet: new set with the elements in the difference
         """
-        o = SortedContainer._trygetimpl(other)
-        return SortedSet(self._impl.difference(o), self._typecode)
+        args = SortedContainer._impl_or_iter(other)
+        return SortedSet(self._impl.difference(*args), self._typecode)
 
     def symmetric_difference(self, other):
         """Return a ``SortedSet` with the elements found in either ``self`` or
@@ -64,8 +64,8 @@ class SortedSet(SortedContainer):
         Returns:
             SortedSet: new set with the elements in the symmetric difference
         """
-        o = SortedContainer._trygetimpl(other)
-        return SortedSet(self._impl.symmetric_difference(o), self._typecode)
+        args = SortedContainer._impl_or_iter(other)
+        return SortedSet(self._impl.symmetric_difference(*args), self._typecode)
 
     def intersection(self, other):
         """Return a ``SortedSet`` with the elements found in both ``self`` and
@@ -77,5 +77,5 @@ class SortedSet(SortedContainer):
         Returns:
             SortedSet: new set with the elements in the intersection
         """
-        o = SortedContainer._trygetimpl(other)
-        return SortedSet(self._impl.intersection(o), self._typecode)
+        args = SortedContainer._impl_or_iter(other)
+        return SortedSet(self._impl.intersection(*args), self._typecode)

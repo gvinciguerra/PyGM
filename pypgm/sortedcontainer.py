@@ -5,74 +5,71 @@ from . import _pypgm
 
 class SortedContainer(collections.abc.Sequence):
     @staticmethod
-    def _fromtypecode(arg, typecode, drop_duplicates):
+    def _fromtypecode(typecode, *args):
         if typecode in 'BHI':
-            return _pypgm.PGMIndexUInt32(arg, drop_duplicates)
+            return _pypgm.PGMIndexUInt32(*args)
         elif typecode in 'LQN':
-            return _pypgm.PGMIndexUInt64(arg, drop_duplicates)
+            return _pypgm.PGMIndexUInt64(*args)
         elif typecode in 'bhi':
-            return _pypgm.PGMIndexInt32(arg, drop_duplicates)
+            return _pypgm.PGMIndexInt32(*args)
         elif typecode in 'lqn':
-            return _pypgm.PGMIndexInt64(arg, drop_duplicates)
+            return _pypgm.PGMIndexInt64(*args)
         elif typecode in 'ef':
-            return _pypgm.PGMIndexFloat(arg, drop_duplicates)
+            return _pypgm.PGMIndexFloat(*args)
         elif typecode in 'd':
-            return _pypgm.PGMIndexDouble(arg, drop_duplicates)
+            return _pypgm.PGMIndexDouble(*args)
         else:
             raise TypeError('Unsupported typecode')
 
     @staticmethod
-    def _trygetimpl(o):
-        return o._impl if isinstance(o, SortedContainer) else o
+    def _impl_or_iter(o):
+        l = len(o) if hasattr(o, '__len__') else 0
+        o = o._impl if isinstance(o, SortedContainer) else iter(o)
+        return (o, l)
 
     @staticmethod
-    def _initwitharg(self, arg, typecode, drop_duplicates):
-        if arg is None or (hasattr(arg, '__len__') and len(arg) == 0):
+    def _initwitharg(self, o, typecode, drop_duplicates):
+        has_len = hasattr(o, '__len__')
+        if o is None or (has_len and len(o) == 0):
             self._typecode = 'b'
             self._impl = _pypgm.PGMIndexInt32()
             return
 
-        if isinstance(arg, (_pypgm.PGMIndexUInt32, _pypgm.PGMIndexUInt64,
-                            _pypgm.PGMIndexInt32, _pypgm.PGMIndexInt64,
-                            _pypgm.PGMIndexFloat, _pypgm.PGMIndexDouble)):
-            if drop_duplicates and arg.has_duplicates():
+        tinit = SortedContainer._fromtypecode
+
+        # Init from internal _pypgm objects
+        if isinstance(o, (_pypgm.PGMIndexUInt32, _pypgm.PGMIndexUInt64,
+                          _pypgm.PGMIndexInt32, _pypgm.PGMIndexInt64,
+                          _pypgm.PGMIndexFloat, _pypgm.PGMIndexDouble)):
+            if drop_duplicates and o.has_duplicates():
                 self._typecode = typecode
-                self._impl = SortedContainer._fromtypecode(
-                    arg, typecode, drop_duplicates)
+                self._impl = tinit(typecode, o, drop_duplicates)
                 return
             self._typecode = typecode
-            self._impl = arg
+            self._impl = o
             return
 
-        # Init from an object implementing the buffer protocol
-        try:
-            v = memoryview(arg)
-            self._typecode = typecode or v.format
-            self._impl = SortedContainer._fromtypecode(
-                v, self._typecode, drop_duplicates)
-            return
-        except TypeError:
-            pass
-
-        # Init from a Python collection
-        if isinstance(arg, (list, tuple, set, dict)) and len(arg) > 0:
-            if typecode:
+        # Init from an iterable
+        is_iterable = isinstance(o, collections.abc.Iterable)
+        if is_iterable:
+            hint = len(o) if has_len else 0
+            if typecode:  # user-provided typecode
                 self._typecode = typecode
-                self._impl = SortedContainer._fromtypecode(
-                    arg, self._typecode, drop_duplicates)
+                self._impl = tinit(typecode, iter(o), hint, drop_duplicates)
                 return
 
-            anyfloat = any(isinstance(x, float) for x in arg)
-            self._typecode = 'd' if anyfloat else 'q'
-            self._impl = SortedContainer._fromtypecode(
-                arg, self._typecode, drop_duplicates)
-            return
+            try:  # try to get the typecode from memoryview
+                v = memoryview(o)
+                self._typecode = v.format
+                self._impl = tinit(v.format, iter(v), hint, drop_duplicates)
+                return
+            except TypeError:
+                pass
 
-        # Init from an iterator
-        if isinstance(arg, collections.abc.Iterable):
-            self._typecode = typecode or 'q'
-            self._impl = SortedContainer._fromtypecode(
-                iter(arg), self._typecode, drop_duplicates)
+            # Find the typecode by inspecting the type of the elements
+            anyfloat = any(isinstance(x, float) for x in o)
+            self._typecode = 'd' if anyfloat else 'q'
+            self._impl = tinit(self._typecode, iter(o), hint, drop_duplicates)
             return
 
         raise TypeError('Unsupported argument type')

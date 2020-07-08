@@ -38,8 +38,8 @@ class SortedList(SortedContainer):
         Returns:
             SortedList: new list with the merged elements
         """
-        o = SortedContainer._trygetimpl(other)
-        return SortedList(self._impl.merge(o), self._typecode)
+        args = SortedContainer._impl_or_iter(other)
+        return SortedList(self._impl.merge(*args), self._typecode)
 
     def __sub__(self, other):
         """Return a new ``SortedList`` by removing from ``self`` the elements
@@ -59,8 +59,8 @@ class SortedList(SortedContainer):
         Returns:
             SortedList: new list with the elements in the difference
         """
-        o = SortedContainer._trygetimpl(other)
-        return SortedList(self._impl.difference(o), self._typecode)
+        args = SortedContainer._impl_or_iter(other)
+        return SortedList(self._impl.difference(*args), self._typecode)
 
     def drop_duplicates(self):
         """Return ``self`` with duplicate elements removed.

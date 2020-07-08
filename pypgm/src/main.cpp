@@ -1,4 +1,3 @@
-#include <pybind11/numpy.h>
 #include <pybind11/operators.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
@@ -63,28 +62,15 @@ OutputIt set_unique_symmetric_difference(InputIt1 first1, InputIt1 last1, InputI
     return std::unique_copy(first2, last2, out);
 }
 
-template <typename K> void shrink_if_needed(K *&a, size_t &capacity, size_t size) {
-    if (size < capacity) {
-        auto tmp = a;
-        a = new K[size];
-        capacity = size;
-        std::copy_n(tmp, size, a);
-        delete[] tmp;
-    }
-}
-
 template <typename K> class PGMWrapper {
-    K *data;
-    size_t n;
+    std::vector<K> data;
     PGMIndex<K> pgm;
     bool duplicates;
 
-    typedef K *(*set_fun)(const K *, const K *, const K *, const K *, K *);
-
     void build_pgm() {
-        if (n < 1ull << 15) {
+        if (size() < 1ull << 15)
             pgm = decltype(pgm)(begin(), end());
-        } else {
+        else {
             py::gil_scoped_release release;
             pgm = decltype(pgm)(begin(), end());
         }
@@ -100,162 +86,66 @@ template <typename K> class PGMWrapper {
         }
     }
 
-    static K implicit_cast(std::pair<py::handle, py::handle> h) { return implicit_cast(h.first); }
-
-    template <typename C> static size_t get_size(const C &c) { return c.size(); }
-
-    static size_t get_size(const py::array_t<K> &a) { return a.shape(0); }
-
   public:
+    using iterator = typename std::vector<K>::iterator;
+    using const_iterator = typename std::vector<K>::const_iterator;
+
     PGMWrapper() = default;
 
     PGMWrapper(const PGMWrapper &p, bool drop_duplicates) {
-        if (p.duplicates && drop_duplicates) {
-            n = p.size();
-            data = new K[n];
-            auto m = (size_t) std::distance(data, std::unique_copy(p.begin(), p.end(), data));
-            shrink_if_needed(data, n, m);
+        if (p.has_duplicates() && drop_duplicates) {
+            data.reserve(p.size());
+            std::unique_copy(p.begin(), p.end(), std::back_inserter(data));
+            data.shrink_to_fit();
             duplicates = false;
             build_pgm();
             return;
         }
 
-        n = p.size();
         pgm = p.pgm;
+        data = p.data;
         duplicates = p.duplicates;
-        data = new K[n];
-        std::copy_n(p.data, n, data);
     }
 
-    template <typename PyClass> PGMWrapper(PyClass l, bool drop_duplicates) {
-        n = l.size();
-        data = new K[n];
-
-        size_t j;
+    PGMWrapper(py::iterator it, size_t size_hint, bool drop_duplicates) {
         auto sorted = true;
-        auto it = l.begin();
-        if (n > 0)
-            data[0] = implicit_cast(*it++);
-        for (j = 1; it != l.end(); ++it, ++j) {
-            auto x = implicit_cast(*it);
-            if (x < data[j - 1])
-                sorted = false;
-            data[j] = x;
-        }
-
-        if (!sorted)
-            std::sort(data, data + j);
-
-        if (drop_duplicates) {
-            duplicates = false;
-            j = std::distance(data, std::unique(data, data + j));
-            shrink_if_needed(data, n, j);
-        } else
-            duplicates = true;
-
-        build_pgm();
-    }
-
-    PGMWrapper(py::iterator it, bool drop_duplicates) {
-        auto sorted = true;
-        std::vector<K> v;
-        v.reserve(8192);
+        data.reserve(size_hint);
+        if (it != py::iterator::sentinel())
+            data.push_back(implicit_cast(*it++));
         for (; it != py::iterator::sentinel(); ++it) {
             auto x = implicit_cast(*it);
-            if (x < v.back())
+            if (x < data.back())
                 sorted = false;
-            v.push_back(x);
+            data.push_back(x);
         }
 
         if (!sorted)
-            std::sort(v.begin(), v.end());
-
-        n = v.size();
-        data = new K[n];
+            std::sort(data.begin(), data.end());
         if (drop_duplicates) {
-            auto m = (size_t) std::distance(data, std::unique_copy(v.begin(), v.end(), data));
+            data.erase(std::unique(data.begin(), data.end()), data.end());
             duplicates = false;
-            shrink_if_needed(data, n, m);
-        } else {
-            duplicates = true;
-            std::copy(v.begin(), v.end(), data);
-        }
-
-        build_pgm();
-    }
-
-    PGMWrapper(K *data, size_t n, bool duplicates) : data(data), n(n), duplicates(duplicates) { build_pgm(); }
-
-#define FORMAT_TYPE_CASE(c, type)                                                                                      \
-    case c: {                                                                                                          \
-        auto ptr = (type *) info.ptr;                                                                                  \
-        if (n > 0)                                                                                                     \
-            data[j++] = K(ptr[0]);                                                                                     \
-        for (auto i = 1ull; i < n; ++i) {                                                                              \
-            auto x = K(ptr[i]);                                                                                        \
-            if (x < data[j - 1])                                                                                       \
-                sorted = false;                                                                                        \
-            data[j++] = x;                                                                                             \
-        }                                                                                                              \
-        break;                                                                                                         \
-    }
-
-    PGMWrapper(py::buffer b, bool drop_duplicates) {
-        py::buffer_info info = b.request();
-        if (info.ndim != 1)
-            throw py::type_error("Incorrect number of dimensions: " + std::to_string(info.ndim) + "; expected 1");
-
-        n = info.shape[0];
-        data = new K[n];
-        auto j = 0ull;
-        auto sorted = true;
-
-        switch (info.format[0]) {
-            FORMAT_TYPE_CASE('c', char);
-            FORMAT_TYPE_CASE('b', signed char);
-            FORMAT_TYPE_CASE('B', unsigned char);
-            FORMAT_TYPE_CASE('h', short);
-            FORMAT_TYPE_CASE('H', unsigned short);
-            FORMAT_TYPE_CASE('i', int);
-            FORMAT_TYPE_CASE('I', unsigned int);
-            FORMAT_TYPE_CASE('l', long);
-            FORMAT_TYPE_CASE('L', unsigned long);
-            FORMAT_TYPE_CASE('q', long long);
-            FORMAT_TYPE_CASE('Q', unsigned long long);
-            FORMAT_TYPE_CASE('n', ssize_t);
-            FORMAT_TYPE_CASE('N', size_t);
-            FORMAT_TYPE_CASE('f', float);
-            FORMAT_TYPE_CASE('d', double);
-        default:
-            throw py::type_error("Unsupported buffer format");
-        }
-
-        if (!sorted)
-            std::sort(data, data + j);
-
-        if (drop_duplicates) {
-            duplicates = false;
-            j = std::distance(data, std::unique(data, data + j));
-            shrink_if_needed(data, n, j);
         } else
             duplicates = true;
 
+        data.shrink_to_fit();
         build_pgm();
     }
+
+    PGMWrapper(std::vector<K> &&data, bool duplicates) : data(std::move(data)), duplicates(duplicates) { build_pgm(); }
 
     bool contains(K x) const {
         auto ap = pgm.find_approximate_position(x);
-        return std::binary_search(data + ap.lo, data + ap.hi, x);
+        return std::binary_search(data.begin() + ap.lo, data.begin() + ap.hi, x);
     }
 
-    K *lower_bound(K x) const {
+    const_iterator lower_bound(K x) const {
         auto ap = pgm.find_approximate_position(x);
-        return std::lower_bound(data + ap.lo, data + ap.hi, x);
+        return std::lower_bound(data.begin() + ap.lo, data.begin() + ap.hi, x);
     }
 
-    K *upper_bound(K x) const {
+    const_iterator upper_bound(K x) const {
         auto ap = pgm.find_approximate_position(x);
-        auto it = std::upper_bound(data + ap.lo, data + ap.hi, x);
+        auto it = std::upper_bound(data.begin() + ap.lo, data.begin() + ap.hi, x);
         if (!duplicates)
             return it;
 
@@ -265,81 +155,86 @@ template <typename K> class PGMWrapper {
         return std::upper_bound(it + (step / 2), std::min(it + step, end()), x);
     }
 
-    // TODO: set_operation taking a py::buffer and a py::iterator
-    template <set_fun F>
-    PGMWrapper *set_operation(const py::array_t<K> &a, size_t out_size_hint, bool generates_duplicates) const {
-        auto r = a.template unchecked<1>();
-        auto a_size = r.shape(0);
-        auto a_begin = r.data(0);
-        auto a_end = r.data(r.shape(0));
-
-        auto tmp_out = new K[out_size_hint];
-        K *tmp_out_end;
-
-        if (std::is_sorted(a_begin, a_end))
-            tmp_out_end = F(begin(), end(), a_begin, a_end, tmp_out);
-        else {
-            auto tmp = new K[a_size];
-            std::copy(a_begin, a_end, tmp);
-            std::sort(tmp, tmp + a_size);
-            tmp_out_end = F(begin(), end(), tmp, tmp + a_size, tmp_out);
-            delete[] tmp;
-        }
-
-        auto out_size = (size_t) std::distance(tmp_out, tmp_out_end);
-        shrink_if_needed(tmp_out, out_size_hint, out_size);
-        return new PGMWrapper<K>(tmp_out, out_size, generates_duplicates);
+    template <typename O> PGMWrapper<K> *merge(const O &o, size_t o_size) const {
+        return set_operation<std::merge>(o, o_size, size() + o_size, true);
     }
 
-    template <set_fun F>
-    PGMWrapper *set_operation(const PGMWrapper<K> &q, size_t out_size_hint, size_t generates_duplicates) const {
-        auto tmp_out = new K[out_size_hint];
-        auto out_size = (size_t) std::distance(tmp_out, F(begin(), end(), q.begin(), q.end(), tmp_out));
-        shrink_if_needed(tmp_out, out_size_hint, out_size);
-        return new PGMWrapper<K>(tmp_out, out_size, generates_duplicates);
+    template <typename O> PGMWrapper<K> *set_difference(const O &o, size_t o_size) const {
+        return set_operation<std::set_difference>(o, o_size, size(), false);
     }
 
-    template <typename Container> PGMWrapper *merge(const Container &c) {
-        return set_operation<std::merge>(c, size() + get_size(c), true);
+    template <typename O> PGMWrapper<K> *set_symmetric_difference(const O &o, size_t o_size) const {
+        return set_operation<set_unique_symmetric_difference>(o, o_size, size() + o_size, false);
     }
 
-    template <typename Container> PGMWrapper *set_difference(const Container &c) {
-        return set_operation<std::set_difference>(c, size(), false);
+    template <typename O> PGMWrapper<K> *set_union(const O &o, size_t o_size) const {
+        return set_operation<set_unique_union>(o, o_size, size() + o_size, false);
     }
 
-    template <typename Container> PGMWrapper *set_symmetric_difference(const Container &c) {
-        return set_operation<set_unique_symmetric_difference>(c, size() + get_size(c), false);
-    }
-
-    template <typename Container> PGMWrapper *set_union(const Container &c) {
-        return set_operation<set_unique_union>(c, size() + get_size(c), false);
-    }
-
-    template <typename Container> PGMWrapper *set_intersection(const Container &c) {
+    template <typename O> PGMWrapper<K> *set_intersection(const O &o, size_t o_size) const {
         assert(!has_duplicates()); // otherwise std::set_intersection may output duplicates
-        return set_operation<std::set_intersection>(c, std::min(size(), get_size(c)), false);
+        return set_operation<std::set_intersection>(o, o_size, std::min(size(), o_size), false);
     }
 
-    std::unordered_map<std::string, size_t> stats() {
+    std::unordered_map<std::string, size_t> stats() const {
         std::unordered_map<std::string, size_t> stats;
         stats["leaf segments"] = pgm.segments_count();
-        stats["data size"] = sizeof(K) * n + sizeof(*this);
+        stats["data size"] = sizeof(K) * size() + sizeof(*this);
         stats["index size"] = pgm.size_in_bytes();
         stats["height"] = pgm.height();
         return stats;
     }
 
-    K operator[](size_t i) const { return begin()[i]; }
+    K operator[](size_t i) const { return data[i]; }
 
-    size_t size() const { return n; }
+    size_t size() const { return data.size(); }
 
     bool has_duplicates() const { return duplicates; }
 
-    K *begin() const { return data; }
+    auto begin() { return data.begin(); }
 
-    K *end() const { return data + n; }
+    auto end() { return data.end(); }
 
-    ~PGMWrapper() { delete[] data; }
+    auto begin() const { return data.cbegin(); }
+
+    auto end() const { return data.cend(); }
+
+  private:
+    using back_iterator = typename std::back_insert_iterator<std::vector<K>>;
+    using set_fun = back_iterator (*)(const_iterator, const_iterator, const_iterator, const_iterator, back_iterator);
+
+    template <set_fun F>
+    PGMWrapper<K> *set_operation(py::iterator it, size_t it_size_hint, size_t size_hint, bool generates_duplicates) const {
+        std::vector<K> out;
+        std::vector<K> tmp;
+        out.reserve(size_hint);
+        tmp.reserve(it_size_hint);
+
+        auto sorted = true;
+        if (it != py::iterator::sentinel())
+            tmp.push_back(implicit_cast(*it++));
+        for (; it != py::iterator::sentinel(); ++it) {
+            auto x = implicit_cast(*it);
+            if (x < data.back())
+                sorted = false;
+            tmp.push_back(x);
+        }
+        if (!sorted)
+            std::sort(tmp.begin(), tmp.end());
+
+        F(begin(), end(), tmp.begin(), tmp.end(), std::back_inserter(out));
+        out.shrink_to_fit();
+        return new PGMWrapper<K>(std::move(out), generates_duplicates);
+    }
+
+    template <set_fun F>
+    PGMWrapper<K> *set_operation(const PGMWrapper<K> &q, size_t, size_t size_hint, bool generates_duplicates) const {
+        std::vector<K> out;
+        out.reserve(size_hint);
+        F(begin(), end(), q.begin(), q.end(), std::back_inserter(out));
+        out.shrink_to_fit();
+        return new PGMWrapper<K>(std::move(out), generates_duplicates);
+    }
 };
 
 template <typename K> void declare_class(py::module &m, const std::string &name) {
@@ -347,12 +242,7 @@ template <typename K> void declare_class(py::module &m, const std::string &name)
     py::class_<PGM>(m, name.c_str())
         .def(py::init<>())
         .def(py::init<const PGM &, bool>())
-        .def(py::init<py::set, bool>())
-        .def(py::init<py::list, bool>())
-        .def(py::init<py::dict, bool>())
-        .def(py::init<py::tuple, bool>())
-        .def(py::init<py::buffer, bool>())
-        .def(py::init<py::iterator, bool>())
+        .def(py::init<py::iterator, size_t, bool>())
 
         // sequence protocol
         .def("__len__", &PGM::size)
@@ -367,20 +257,21 @@ template <typename K> void declare_class(py::module &m, const std::string &name)
                     throw py::error_already_set();
 
                 bool duplicates = false;
-                auto data = new K[length];
+                std::vector<K> out;
+                out.reserve(length);
                 if (length > 0) {
-                    data[0] = p[start];
+                    out.push_back(p[start]);
                     start += step;
                 }
-
                 for (size_t i = 1; i < length; ++i) {
-                    data[i] = p[start];
+                    auto x = p[start];
                     start += step;
-                    if (data[i] == data[i - 1])
+                    if (x == out.back())
                         duplicates = true;
+                    out.push_back(x);
                 }
 
-                return new PGM(data, length, duplicates);
+                return new PGM(std::move(out), duplicates);
             },
             py::arg("slice").noconvert())
 
@@ -480,29 +371,21 @@ template <typename K> void declare_class(py::module &m, const std::string &name)
 
         // multiset operations
         .def("merge", &PGM::template merge<const PGM &>)
-        .def("merge", &PGM::template merge<const py::array_t<K>>)
+        .def("merge", &PGM::template merge<py::iterator>)
 
         .def("difference", &PGM::template set_difference<const PGM &>)
-        .def("difference", &PGM::template set_difference<const py::array_t<K>>)
+        .def("difference", &PGM::template set_difference<py::iterator>)
 
         .def("symmetric_difference", &PGM::template set_symmetric_difference<const PGM &>)
-        .def("symmetric_difference", &PGM::template set_symmetric_difference<const py::array_t<K>>)
+        .def("symmetric_difference", &PGM::template set_symmetric_difference<py::iterator>)
 
         .def("union", &PGM::template set_union<const PGM &>)
-        .def("union", &PGM::template set_union<const py::array_t<K>>)
+        .def("union", &PGM::template set_union<py::iterator>)
 
-        // .def("intersection", &PGM::set_intersection)
         .def("intersection", &PGM::template set_intersection<const PGM &>)
-        .def("intersection", &PGM::template set_intersection<const py::array_t<K>>)
+        .def("intersection", &PGM::template set_intersection<py::iterator>)
 
-        .def("drop_duplicates",
-             [](const PGM &p) {
-                 auto capacity = p.size();
-                 auto data = new K[capacity];
-                 auto size = (size_t) std::distance(data, std::unique_copy(p.begin(), p.end(), data));
-                 shrink_if_needed(data, capacity, size);
-                 return new PGM(data, size, false);
-             })
+        .def("drop_duplicates", [](const PGM &p) { return new PGM(p, true); })
 
         // other methods
         .def("stats", &PGM::stats)
