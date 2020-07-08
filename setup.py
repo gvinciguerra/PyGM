@@ -32,10 +32,10 @@ def has_flag(compiler, flag):
 ext_modules = [
     setuptools.Extension(
         'pypgm._pypgm',
-        ['pypgm/src/main.cpp'],
+        ['pypgm/pypgm.cpp'],
         include_dirs=[
             get_pybind_include(),
-            'PGM-Index/include',
+            'PGM-index/include',
         ],
         language='c++'
     ),
@@ -93,6 +93,7 @@ setuptools.setup(
     license='GPL-3.0',
     description='Python wrapper for the PGM-index',
     long_description=open('README.md').read(),
+    long_description_content_type='text/markdown',
     ext_modules=ext_modules,
     packages=setuptools.find_packages(),
     setup_requires=['pybind11>=2.5.0'],

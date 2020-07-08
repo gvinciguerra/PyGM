@@ -204,7 +204,8 @@ template <typename K> class PGMWrapper {
     using set_fun = back_iterator (*)(const_iterator, const_iterator, const_iterator, const_iterator, back_iterator);
 
     template <set_fun F>
-    PGMWrapper<K> *set_operation(py::iterator it, size_t it_size_hint, size_t size_hint, bool generates_duplicates) const {
+    PGMWrapper<K> *set_operation(py::iterator it, size_t it_size_hint, size_t size_hint,
+                                 bool generates_duplicates) const {
         std::vector<K> out;
         std::vector<K> tmp;
         out.reserve(size_hint);
