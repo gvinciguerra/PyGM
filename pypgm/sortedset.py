@@ -1,5 +1,3 @@
-import collections.abc
-
 from .sortedcontainer import SortedContainer
 
 

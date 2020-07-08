@@ -23,9 +23,9 @@ class SortedContainer(collections.abc.Sequence):
 
     @staticmethod
     def _impl_or_iter(o):
-        l = len(o) if hasattr(o, '__len__') else 0
+        n = len(o) if hasattr(o, '__len__') else 0
         o = o._impl if isinstance(o, SortedContainer) else iter(o)
-        return (o, l)
+        return (o, n)
 
     @staticmethod
     def _initwitharg(self, o, typecode, drop_duplicates):
@@ -41,10 +41,7 @@ class SortedContainer(collections.abc.Sequence):
         if isinstance(o, (_pypgm.PGMIndexUInt32, _pypgm.PGMIndexUInt64,
                           _pypgm.PGMIndexInt32, _pypgm.PGMIndexInt64,
                           _pypgm.PGMIndexFloat, _pypgm.PGMIndexDouble)):
-            if drop_duplicates and o.has_duplicates():
-                self._typecode = typecode
-                self._impl = tinit(typecode, o, drop_duplicates)
-                return
+            assert not (drop_duplicates and o.has_duplicates())
             self._typecode = typecode
             self._impl = o
             return

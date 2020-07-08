@@ -293,7 +293,7 @@ template <typename K> void declare_class(py::module &m, const std::string &name)
         .def(
             "__reversed__",
             [](const PGM &p) {
-                return py::make_iterator(std::make_reverse_iterator(p.begin()), std::make_reverse_iterator(p.end()));
+                return py::make_iterator(std::make_reverse_iterator(p.end()), std::make_reverse_iterator(p.begin()));
             },
             py::keep_alive<0, 1>())
 
