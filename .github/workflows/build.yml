@@ -1,0 +1,36 @@
+name: build
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+        python-version: [3.5, 3.6, 3.7, 3.8]
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        if [ "$RUNNER_OS" == "macOS" ]; then brew install libomp; fi
+        python -m pip install --upgrade pip
+        pip install pytest pybind11
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        git submodule update --init --recursive --remote
+    - name: Install pypgm
+      run: |
+        pip install .
+    - name: Test with pytest
+      run: |
+        pytest
