@@ -1,4 +1,3 @@
-import os
 import subprocess
 import sys
 import tempfile
@@ -112,5 +111,6 @@ setuptools.setup(
         'Topic :: System',
         'Topic :: System :: Archiving :: Compression',
     ],
-    keywords='tree list array btree b+tree vector skiplist container sortedlist sorted set query index data structure',
+    keywords=('tree list array btree b+tree vector skiplist container '
+              'sortedlist sorted set query index data structure'),
 )

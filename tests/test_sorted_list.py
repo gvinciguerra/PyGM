@@ -19,14 +19,47 @@ def test_init():
     assert SortedList({1: 'a', 2: 'b', 3: 'c'}) == [1, 2, 3]
     assert SortedList({1, 5, 5, 10}) == [1, 5, 10]
     assert SortedList(range(5, 0, -1)) == [1, 2, 3, 4, 5]
-    assert SortedList({1, 5, 5, 10}) == [1, 5, 10]
+    assert SortedList({1, 5, 5, 10}, 'f') == [1., 5., 10.]
+    assert SortedList(array('f', (1, 2, 2, 3))) == [1., 2., 2., 3.]
     assert SortedList(array('d', (1, 2, 2, 3))) == [1., 2., 2., 3.]
+    assert SortedList(array('H', (1, 2, 2, 3))) == [1, 2, 2, 3]
+    assert SortedList(array('Q', (1, 2, 2, 3))) == [1, 2, 2, 3]
+    assert SortedList([-5, -1, -5, 5], 'h') == [-5, -5, -1, 5]
+    assert SortedList(SortedList([1]), 'H').stats()['typecode'] == 'H'
+    with pytest.raises(TypeError):
+        SortedList([0], '@')
+    with pytest.raises(TypeError):
+        SortedList(lambda x: x + 10)
+    with pytest.raises(ValueError):
+        SortedList("ciao")
+
+
+def test_compare():
+    assert not SortedList([1] * 10) == SortedList([1] * 100)
+    assert SortedList([-5, -4, -3, -2, -1]) > SortedList([-10, -5])
+    assert SortedList([2, 4, 8, 10]) >= SortedList([1, 4, 7, 10])
+    assert SortedList([10, 100, 1000]) != SortedList([10, 100])
+    assert SortedList([10, 100, 1000]) <= SortedList([10, 100, 10000])
+    assert SortedList([10, 100, 1000]) < SortedList([100, 1000, 1000])
+    with pytest.raises(TypeError):
+        SortedList() < (lambda: 5)
 
 
 def test_contains():
     assert 5 in SortedList(range(100))
     assert 50 not in SortedList(list(range(50)) + list(range(51, 100)))
     assert 500. in SortedList([1., 1.] * 10 + [500.] * 2 + [1000.] * 5)
+
+
+def test_reversed():
+    assert list(reversed(SortedList(range(50)))) == list(reversed(range(50)))
+    assert list(reversed(SortedList([1, 3, 3, 2, 1]))) == [3, 3, 2, 1, 1]
+
+
+def test_repr():
+    assert '1, ..., 1' in repr(SortedList([1] * 10000))
+    assert '1.5, ..., 1.5' in repr(SortedList([1.5] * 10000))
+    assert '[-1, 0, 0, 1]' in repr(SortedList([1, 0, 0, -1]))
 
 
 def test_getitem():

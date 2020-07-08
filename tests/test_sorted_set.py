@@ -3,7 +3,7 @@ import random
 from array import array
 
 import pytest
-from pypgm import SortedSet
+from pypgm import SortedSet, SortedList
 
 
 def test_len():
@@ -122,6 +122,7 @@ def test_union():
     l3 = SortedSet(range(2, 100, 3))
     assert list(l1.union(l2).union(l3)) == list(range(100))
     assert list(l1.union([-1, 5])) == sorted(list(range(0, 100, 3)) + [-1, 5])
+    assert len(l1.union(SortedList([-1, 3, 0, 3, 3]))) == 35
 
 
 def test_difference():
