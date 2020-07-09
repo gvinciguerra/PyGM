@@ -233,7 +233,7 @@ class SortedContainer(collections.abc.Sequence):
         return self._impl.index(x, start, stop)
 
     def stats(self):
-        """Return a dict containing statistics about self.
+        """Return a dict containing statistics about ``self``.
 
         The keys are:
 
@@ -244,16 +244,30 @@ class SortedContainer(collections.abc.Sequence):
         * ``'typecode'`` type of the elements (see the `array` module)
 
         Returns:
-            dict[str, object]: a dictionary with stats about self
+            dict[str, object]: a dictionary with stats about ``self``
         """
         d = self._impl.stats()
         d['typecode'] = self._typecode
         return d
 
     def __iter__(self):
+        """Return an iterator over the elements of ``self``.
+
+        ``self.__iter__()`` <==> ``iter(self)``
+
+        Returns:
+            iterator: iterator over the elements
+        """
         return self._impl.__iter__()
 
     def __reversed__(self):
+        """Return a reverse iterator over the elements of ``self``.
+
+        ``self.__iter__()`` <==> ``iter(self)``
+
+        Returns:
+            iterator: reverse iterator over the elements
+        """
         return self._impl.__reversed__()
 
     def __repr__(self):

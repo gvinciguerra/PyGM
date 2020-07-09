@@ -2,6 +2,22 @@ from .sortedcontainer import SortedContainer
 
 
 class SortedSet(SortedContainer):
+    """A sorted set with efficient query performance and memory usage.
+
+    The set is initialised with the content of the provided iterable ``arg``.
+
+    The ``typecode`` argument is a single character that restricts the
+    type of the stored elements. Type codes are defined in the 
+    `array <https://docs.python.org/3/library/array.html>`_ module of the
+    standard library.  If no type code is specified, the type is inferred
+    from the contents of ``arg``.
+
+    Args:
+        arg (iterable, optional): initial elements. Defaults to None.
+        typecode (char, optional): type of the stored elements. Defaults
+            to None.
+    """
+
     def __init__(self, arg=None, typecode=None):
         SortedContainer._initwitharg(self, arg, typecode, True)
 
@@ -27,7 +43,7 @@ class SortedSet(SortedContainer):
         Values in ``other`` do not need to be in sorted order.
 
         Args:
-            other: a sequence of values
+            other (iterable): a sequence of values
 
         Returns:
             SortedSet: new set with the elements in the union
@@ -42,7 +58,7 @@ class SortedSet(SortedContainer):
         Values in ``other`` do not need to be in sorted order.
 
         Args:
-            other: a sequence of values
+            other (iterable): a sequence of values
 
         Returns:
             SortedSet: new set with the elements in the difference
@@ -57,7 +73,7 @@ class SortedSet(SortedContainer):
         Values in ``other`` do not need to be in sorted order.
 
         Args:
-            other: a sequence of values
+            other (iterable): a sequence of values
 
         Returns:
             SortedSet: new set with the elements in the symmetric difference
@@ -69,8 +85,10 @@ class SortedSet(SortedContainer):
         """Return a ``SortedSet`` with the elements found in both ``self`` and
         ``other``.
 
+        Values in ``other`` do not need to be in sorted order.
+
         Args:
-            other: a sequence of values
+            other (iterable): a sequence of values
 
         Returns:
             SortedSet: new set with the elements in the intersection
