@@ -1,22 +1,6 @@
-# Created by https://www.toptal.com/developers/gitignore/api/cmake,python,macos
-# Edit at https://www.toptal.com/developers/gitignore?templates=cmake,python,macos
 
-### CMake ###
-CMakeLists.txt.user
-CMakeCache.txt
-CMakeFiles
-CMakeScripts
-Testing
-Makefile
-cmake_install.cmake
-install_manifest.txt
-compile_commands.json
-CTestTestfile.cmake
-_deps
-
-### CMake Patch ###
-# External projects
-*-prefix/
+# Created by https://www.toptal.com/developers/gitignore/api/macos,python
+# Edit at https://www.toptal.com/developers/gitignore?templates=macos,python
 
 ### macOS ###
 # General
@@ -180,4 +164,4 @@ dmypy.json
 # pytype static type analyzer
 .pytype/
 
-# End of https://www.toptal.com/developers/gitignore/api/cmake,python,macos
+# End of https://www.toptal.com/developers/gitignore/api/macos,python
