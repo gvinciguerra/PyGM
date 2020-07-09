@@ -131,12 +131,11 @@ def test_count():
 
 
 def test_range():
-    l = SortedList(range(1, 100, 4))
-    assert list(l.range(25, 50)) == list(range(25, 51, 4))
-    assert list(l.range(25, 50, (False, False))) == list(range(25, 50, 4))[1:]
-    assert list(l.range(25, 50, (True, False))) == list(range(25, 50, 4))
-    assert list(l.range(25, 50, (False, True))) == list(range(25, 51, 4))[1:]
-    assert list(l.range(33, 50, (True, True), True)) == [49, 45, 41, 37, 33]
+    l = SortedList(range(0, 100, 2))
+    assert list(l.range(10, 20, (False, False))) == [12, 14, 16, 18]
+    assert list(l.range(10, 20, (False, True))) == [12, 14, 16, 18, 20]
+    assert list(l.range(10, 20, (True, False))) == [10, 12, 14, 16, 18]
+    assert list(l.range(10, 20, (True, True))) == [10, 12, 14, 16, 18, 20]
 
 
 def test_index():

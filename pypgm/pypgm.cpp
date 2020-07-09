@@ -348,7 +348,7 @@ template <typename K> void declare_class(py::module &m, const std::string &name)
             "range",
             [](const PGM &p, K a, K b, std::pair<bool, bool> inclusive, bool reverse) {
                 auto l_it = inclusive.first ? p.lower_bound(a) : p.upper_bound(a);
-                auto r_it = inclusive.second ? p.lower_bound(b) : p.upper_bound(b);
+                auto r_it = inclusive.second ? p.upper_bound(b) : p.lower_bound(b);
                 if (reverse)
                     return py::make_iterator(std::make_reverse_iterator(r_it), std::make_reverse_iterator(l_it));
                 return py::make_iterator(l_it, r_it);
