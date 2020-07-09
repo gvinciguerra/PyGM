@@ -90,7 +90,8 @@ setuptools.setup(
     author_email='i@gvdev.com',
     url='https://github.com/gvinciguerra/PyPGM',
     license='GPL-3.0',
-    description='Python wrapper for the PGM-index',
+    description=('Sorted containers with efficient query performance'
+                 'and memory usage'),
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
     ext_modules=ext_modules,
