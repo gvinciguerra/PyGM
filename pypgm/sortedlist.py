@@ -20,6 +20,7 @@ class SortedList(SortedContainer):
 
     * :func:`SortedList.__add__`
     * :func:`SortedList.__sub__`
+    * :func:`SortedList.drop_duplicates`
 
     Methods for accessing and querying elements:
 
@@ -52,6 +53,7 @@ class SortedList(SortedContainer):
 
     Other methods:
 
+    * :func:`SortedList.copy`
     * :func:`SortedList.stats`
     * :func:`SortedList.__repr__`
 
@@ -142,6 +144,16 @@ class SortedList(SortedContainer):
             SortedList: new list without duplicates
         """
         return SortedList(self._impl.drop_duplicates(), self._typecode)
+
+    def copy(self):
+        """Return a copy of ``self``.
+
+        Returns:
+            SortedList: new list with the same elements of ``self``
+        """
+        return SortedList(self._impl, self._typecode)
+
+    __copy__ = copy
 
     def _make_cmp(op, symbol, doc):
         # credits: https://github.com/grantjenks/python-sortedcontainers/

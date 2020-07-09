@@ -139,3 +139,8 @@ def test_intersection():
 def test_symmetric_difference():
     for x in SortedSet(range(100)).symmetric_difference(range(50, 150)):
         assert x < 50 or x > 99
+
+
+def test_copy():
+    assert len(SortedSet().copy()) == 0
+    assert list(SortedSet([4, 1, 3, 3, 2]).copy()) == [1, 2, 3, 4]

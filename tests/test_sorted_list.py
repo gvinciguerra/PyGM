@@ -166,3 +166,8 @@ def test_sub():
 def test_drop_duplicates():
     assert SortedList([2, 3, 8]).drop_duplicates() == [2, 3, 8]
     assert SortedList([2, 3, 8] * 10).drop_duplicates() == [2, 3, 8]
+
+
+def test_copy():
+    assert len(SortedList().copy()) == 0
+    assert SortedList([4, 1, 3, 3, 2]).copy() == [1, 2, 3, 3, 4]
