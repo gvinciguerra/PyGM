@@ -25,7 +25,7 @@ jobs:
       run: |
         if [ "$RUNNER_OS" == "macOS" ]; then brew install libomp; fi
         python -m pip install --upgrade pip
-        pip install pytest pybind11
+        pip install pytest pytest-cov pybind11
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
         git submodule update --init --recursive --remote
     - name: Install pypgm
@@ -33,4 +33,14 @@ jobs:
         pip install .
     - name: Test with pytest
       run: |
-        pytest
+        pytest --cov-report=xml --cov pypgm
+      working-directory: tests
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v1
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        file: tests/coverage.xml
+        flags: unittests
+        env_vars: OS,PYTHON
+        name: codecov-umbrella
+        fail_ci_if_error: true
