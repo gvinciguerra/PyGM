@@ -62,17 +62,21 @@ OutputIt set_unique_symmetric_difference(InputIt1 first1, InputIt1 last1, InputI
     return std::unique_copy(first2, last2, out);
 }
 
-template <typename K> class PGMWrapper {
-    std::vector<K> data;
-    PGMIndex<K> pgm;
-    bool duplicates;
+#define EPSILON_RECURSIVE 4
 
-    void build_pgm() {
-        if (size() < 1ull << 15)
-            pgm = decltype(pgm)(begin(), end());
+template <typename K> class PGMWrapper : private PGMIndex<K, 1, EPSILON_RECURSIVE, double> {
+    std::vector<K> data;
+    bool duplicates;
+    size_t epsilon;
+
+    void build_internal_pgm() {
+        this->n = size();
+        this->first_key = data.front();
+        if (this->n < 1ull << 15)
+            this->build(begin(), end(), epsilon, EPSILON_RECURSIVE);
         else {
             py::gil_scoped_release release;
-            pgm = decltype(pgm)(begin(), end());
+            this->build(begin(), end(), epsilon, EPSILON_RECURSIVE);
         }
     }
 
@@ -92,22 +96,37 @@ template <typename K> class PGMWrapper {
 
     PGMWrapper() = default;
 
-    PGMWrapper(const PGMWrapper &p, bool drop_duplicates) {
+    PGMWrapper(const PGMWrapper &p, bool drop_duplicates, size_t epsilon) : epsilon(epsilon) {
+        if (epsilon < 16)
+            throw std::invalid_argument("epsilon must be >= 16");
+
         if (p.has_duplicates() && drop_duplicates) {
             data.reserve(p.size());
             std::unique_copy(p.begin(), p.end(), std::back_inserter(data));
             data.shrink_to_fit();
             duplicates = false;
-            build_pgm();
+            build_internal_pgm();
             return;
         }
 
-        pgm = p.pgm;
         data = p.data;
         duplicates = p.duplicates;
+
+        if (p.get_epsilon() == epsilon) {
+            this->n = p.n;
+            this->segments = p.segments;
+            this->first_key = p.first_key;
+            this->levels_sizes = p.levels_sizes;
+            this->levels_offsets = p.levels_offsets;
+        } else {
+            build_internal_pgm();
+        }
     }
 
-    PGMWrapper(py::iterator it, size_t size_hint, bool drop_duplicates) {
+    PGMWrapper(py::iterator it, size_t size_hint, bool drop_duplicates, size_t epsilon) : epsilon(epsilon) {
+        if (epsilon < 16)
+            throw std::invalid_argument("epsilon must be >= 16");
+
         auto sorted = true;
         data.reserve(size_hint);
         if (it != py::iterator::sentinel())
@@ -128,23 +147,37 @@ template <typename K> class PGMWrapper {
             duplicates = true;
 
         data.shrink_to_fit();
-        build_pgm();
+        build_internal_pgm();
     }
 
-    PGMWrapper(std::vector<K> &&data, bool duplicates) : data(std::move(data)), duplicates(duplicates) { build_pgm(); }
+    PGMWrapper(std::vector<K> &&data, bool duplicates, size_t epsilon)
+        : data(std::move(data)), duplicates(duplicates), epsilon(epsilon) {
+        if (epsilon < 16)
+            throw std::invalid_argument("epsilon must be >= 16");
+        build_internal_pgm();
+    }
+
+    ApproxPos find_approximate_position(const K &key) const {
+        auto k = std::max(this->first_key, key);
+        auto it = this->segment_for_key(k);
+        auto pos = std::min<size_t>((*it)(k), std::next(it)->intercept);
+        auto lo = SUB_ERR(pos, epsilon);
+        auto hi = ADD_ERR(pos, epsilon + 1, this->n);
+        return {pos, lo, hi};
+    }
 
     bool contains(K x) const {
-        auto ap = pgm.find_approximate_position(x);
+        auto ap = find_approximate_position(x);
         return std::binary_search(data.begin() + ap.lo, data.begin() + ap.hi, x);
     }
 
     const_iterator lower_bound(K x) const {
-        auto ap = pgm.find_approximate_position(x);
+        auto ap = find_approximate_position(x);
         return std::lower_bound(data.begin() + ap.lo, data.begin() + ap.hi, x);
     }
 
     const_iterator upper_bound(K x) const {
-        auto ap = pgm.find_approximate_position(x);
+        auto ap = find_approximate_position(x);
         auto it = std::upper_bound(data.begin() + ap.lo, data.begin() + ap.hi, x);
         if (!duplicates)
             return it;
@@ -178,16 +211,19 @@ template <typename K> class PGMWrapper {
 
     std::unordered_map<std::string, size_t> stats() const {
         std::unordered_map<std::string, size_t> stats;
-        stats["leaf segments"] = pgm.segments_count();
+        stats["epsilon"] = get_epsilon();
+        stats["height"] = this->height();
+        stats["index size"] = this->size_in_bytes();
         stats["data size"] = sizeof(K) * size() + sizeof(*this);
-        stats["index size"] = pgm.size_in_bytes();
-        stats["height"] = pgm.height();
+        stats["leaf segments"] = this->segments_count();
         return stats;
     }
 
     K operator[](size_t i) const { return data[i]; }
 
     size_t size() const { return data.size(); }
+
+    size_t get_epsilon() const { return epsilon; }
 
     bool has_duplicates() const { return duplicates; }
 
@@ -225,7 +261,7 @@ template <typename K> class PGMWrapper {
 
         F(begin(), end(), tmp.begin(), tmp.end(), std::back_inserter(out));
         out.shrink_to_fit();
-        return new PGMWrapper<K>(std::move(out), generates_duplicates);
+        return new PGMWrapper<K>(std::move(out), generates_duplicates, epsilon);
     }
 
     template <set_fun F>
@@ -234,7 +270,7 @@ template <typename K> class PGMWrapper {
         out.reserve(size_hint);
         F(begin(), end(), q.begin(), q.end(), std::back_inserter(out));
         out.shrink_to_fit();
-        return new PGMWrapper<K>(std::move(out), generates_duplicates);
+        return new PGMWrapper<K>(std::move(out), generates_duplicates, epsilon);
     }
 };
 
@@ -242,8 +278,8 @@ template <typename K> void declare_class(py::module &m, const std::string &name)
     using PGM = PGMWrapper<K>;
     py::class_<PGM>(m, name.c_str())
         .def(py::init<>())
-        .def(py::init<const PGM &, bool>())
-        .def(py::init<py::iterator, size_t, bool>())
+        .def(py::init<const PGM &, bool, size_t>())
+        .def(py::init<py::iterator, size_t, bool, size_t>())
 
         // sequence protocol
         .def("__len__", &PGM::size)
@@ -272,7 +308,7 @@ template <typename K> void declare_class(py::module &m, const std::string &name)
                     out.push_back(x);
                 }
 
-                return new PGM(std::move(out), duplicates);
+                return new PGM(std::move(out), duplicates, p.get_epsilon());
             },
             py::arg("slice").noconvert())
 
@@ -386,7 +422,7 @@ template <typename K> void declare_class(py::module &m, const std::string &name)
         .def("intersection", &PGM::template set_intersection<const PGM &>)
         .def("intersection", &PGM::template set_intersection<py::iterator>)
 
-        .def("drop_duplicates", [](const PGM &p) { return new PGM(p, true); })
+        .def("drop_duplicates", [](const PGM &p) { return new PGM(p, true, p.get_epsilon()); })
 
         // other methods
         .def("stats", &PGM::stats)

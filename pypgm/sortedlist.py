@@ -16,6 +16,9 @@ class SortedList(SortedContainer):
     standard library.  If no type code is specified, the type is inferred
     from the contents of ``arg``.
 
+    The ``epsilon`` argument allows to trade off memory usage with query
+    performance. The default value is adequate in most cases.
+
     Methods for adding and removing elements:
 
     * :func:`SortedList.__add__`
@@ -61,6 +64,8 @@ class SortedList(SortedContainer):
         arg (iterable, optional): initial elements. Defaults to None.
         typecode (char, optional): type of the stored elements. Defaults
             to None.
+        epsilon (int, optional): space-time trade-off parameter. Defaults
+            to 64.
 
     Example:
         >>> from pypgm import SortedList
@@ -81,8 +86,8 @@ class SortedList(SortedContainer):
         4
     """
 
-    def __init__(self, arg=None, typecode=None):
-        SortedContainer._initwitharg(self, arg, typecode, False)
+    def __init__(self, arg=None, typecode=None, epsilon=64):
+        SortedContainer._initwitharg(self, arg, typecode, epsilon, False)
 
     def __getitem__(self, i):
         """Return the element at position ``i``.

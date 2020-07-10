@@ -28,14 +28,12 @@ class SortedContainer(collections.abc.Sequence):
         return (o, n)
 
     @staticmethod
-    def _initwitharg(self, o, typecode, drop_duplicates):
+    def _initwitharg(self, o, typecode, epsilon, drop_duplicates):
         has_len = hasattr(o, '__len__')
         if o is None or (has_len and len(o) == 0):
             self._typecode = 'b'
             self._impl = _pypgm.PGMIndexInt32()
             return
-
-        tinit = SortedContainer._fromtypecode
 
         # Init from internal _pypgm objects
         if isinstance(o, (_pypgm.PGMIndexUInt32, _pypgm.PGMIndexUInt64,
@@ -49,16 +47,19 @@ class SortedContainer(collections.abc.Sequence):
         # Init from an iterable
         is_iterable = isinstance(o, collections.abc.Iterable)
         if is_iterable:
-            hint = len(o) if has_len else 0
+            len_hint = len(o) if has_len else 0
+            args = (len_hint, drop_duplicates, epsilon)
+            tinit = SortedContainer._fromtypecode
+
             if typecode:  # user-provided typecode
                 self._typecode = typecode
-                self._impl = tinit(typecode, iter(o), hint, drop_duplicates)
+                self._impl = tinit(typecode, iter(o), *args)
                 return
 
             try:  # try to get the typecode from memoryview
                 v = memoryview(o)
                 self._typecode = v.format
-                self._impl = tinit(v.format, iter(v), hint, drop_duplicates)
+                self._impl = tinit(v.format, iter(v), *args)
                 return
             except TypeError:
                 pass
@@ -66,7 +67,7 @@ class SortedContainer(collections.abc.Sequence):
             # Find the typecode by inspecting the type of the elements
             anyfloat = any(isinstance(x, float) for x in o)
             self._typecode = 'd' if anyfloat else 'q'
-            self._impl = tinit(self._typecode, iter(o), hint, drop_duplicates)
+            self._impl = tinit(self._typecode, iter(o), *args)
             return
 
         raise TypeError('Unsupported argument type')
@@ -239,8 +240,9 @@ class SortedContainer(collections.abc.Sequence):
 
         * ``'data size'`` size of the elements in bytes
         * ``'index size'`` size of the index in bytes
-        * ``'height'`` number of levels of the index
         * ``'leaf segments'`` number of segments in the last level of the index
+        * ``'height'`` number of levels of the index
+        * ``'epsilon'`` value of the trade-off parameter of the index
         * ``'typecode'`` type of the elements (see the `array` module)
 
         Returns:

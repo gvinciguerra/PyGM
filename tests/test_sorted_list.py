@@ -85,10 +85,11 @@ def test_bisect():
         assert sl.bisect_right(x) == bisect.bisect_right(l, x)
 
     l = sorted([random.randint(-1000, 1000) for _ in range(100)])
-    sl = SortedList(l)
-    for x in range(-100, 100):
-        assert sl.bisect_left(x) == bisect.bisect_left(l, x)
-        assert sl.bisect_right(x) == bisect.bisect_right(l, x)
+    for eps in [16, 32, 64, 128, 256]:
+        sl = SortedList(l, 'i', eps)
+        for x in range(-100, 100):
+            assert sl.bisect_left(x) == bisect.bisect_left(l, x)
+            assert sl.bisect_right(x) == bisect.bisect_right(l, x)
 
 
 def test_find():
