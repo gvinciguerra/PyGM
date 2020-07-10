@@ -430,7 +430,7 @@ template <typename K> void declare_class(py::module &m, const std::string &name)
         .def("has_duplicates", &PGM::has_duplicates);
 }
 
-PYBIND11_MODULE(_pypgm, m) {
+PYBIND11_MODULE(_pygm, m) {
     declare_class<uint32_t>(m, "PGMIndexUInt32");
     declare_class<int32_t>(m, "PGMIndexInt32");
     declare_class<int64_t>(m, "PGMIndexInt64");

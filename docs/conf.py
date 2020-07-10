@@ -12,13 +12,13 @@
 #
 import os
 import sys
-from pypgm import __version__
+from pygm import __version__
 sys.path.insert(0, os.path.abspath('..'))
 
 
 # -- Project information -----------------------------------------------------
 
-project = 'PyPGM'
+project = 'PyGM'
 copyright = '2020, Giorgio Vinciguerra'
 author = 'Giorgio Vinciguerra'
 
@@ -28,7 +28,7 @@ release = __version__
 
 # -- General configuration ---------------------------------------------------
 
-autodoc_mock_imports = ['pypgm._pypgm']
+autodoc_mock_imports = ['pygm._pygm']
 autodoc_default_flags = ['members']
 autosummary_generate = True
 
@@ -52,6 +52,8 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 
 # -- Options for HTML output -------------------------------------------------
+
+html_add_permalinks = ''
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.

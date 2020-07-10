@@ -3,7 +3,7 @@ import random
 from array import array
 
 import pytest
-from pypgm import SortedList
+from pygm import SortedList
 
 
 def test_len():

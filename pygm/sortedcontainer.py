@@ -1,23 +1,23 @@
 import collections.abc
 
-from . import _pypgm
+from . import _pygm
 
 
 class SortedContainer(collections.abc.Sequence):
     @staticmethod
     def _fromtypecode(typecode, *args):
         if typecode in 'BHI':
-            return _pypgm.PGMIndexUInt32(*args)
+            return _pygm.PGMIndexUInt32(*args)
         elif typecode in 'LQN':
-            return _pypgm.PGMIndexUInt64(*args)
+            return _pygm.PGMIndexUInt64(*args)
         elif typecode in 'bhi':
-            return _pypgm.PGMIndexInt32(*args)
+            return _pygm.PGMIndexInt32(*args)
         elif typecode in 'lqn':
-            return _pypgm.PGMIndexInt64(*args)
+            return _pygm.PGMIndexInt64(*args)
         elif typecode in 'ef':
-            return _pypgm.PGMIndexFloat(*args)
+            return _pygm.PGMIndexFloat(*args)
         elif typecode in 'd':
-            return _pypgm.PGMIndexDouble(*args)
+            return _pygm.PGMIndexDouble(*args)
         else:
             raise TypeError('Unsupported typecode')
 
@@ -32,13 +32,13 @@ class SortedContainer(collections.abc.Sequence):
         has_len = hasattr(o, '__len__')
         if o is None or (has_len and len(o) == 0):
             self._typecode = 'b'
-            self._impl = _pypgm.PGMIndexInt32()
+            self._impl = _pygm.PGMIndexInt32()
             return
 
-        # Init from internal _pypgm objects
-        if isinstance(o, (_pypgm.PGMIndexUInt32, _pypgm.PGMIndexUInt64,
-                          _pypgm.PGMIndexInt32, _pypgm.PGMIndexInt64,
-                          _pypgm.PGMIndexFloat, _pypgm.PGMIndexDouble)):
+        # Init from internal _pygm objects
+        if isinstance(o, (_pygm.PGMIndexUInt32, _pygm.PGMIndexUInt64,
+                          _pygm.PGMIndexInt32, _pygm.PGMIndexInt64,
+                          _pygm.PGMIndexFloat, _pygm.PGMIndexDouble)):
             assert not (drop_duplicates and o.has_duplicates())
             self._typecode = typecode
             self._impl = o

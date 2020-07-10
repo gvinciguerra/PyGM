@@ -7,7 +7,7 @@ import tempfile
 import setuptools
 from setuptools.command.build_ext import build_ext
 
-__version__ = '0.1.dev3'
+__version__ = '0.1a0'
 
 
 class get_pybind_include(object):
@@ -31,8 +31,8 @@ def has_flag(compiler, flag):
 
 ext_modules = [
     setuptools.Extension(
-        'pypgm._pypgm',
-        ['pypgm/pypgm.cpp'],
+        'pygm._pygm',
+        ['pygm/pygm.cpp'],
         include_dirs=[
             get_pybind_include(),
             'PGM-index/include',
@@ -92,11 +92,16 @@ if 'CXX' not in os.environ:
         print('Found GCC in ', gccs[-1])
 
 setuptools.setup(
-    name='pypgm',
+    name='pygm',
     version=__version__,
     author='Giorgio Vinciguerra',
     author_email='i@gvdev.com',
-    url='https://github.com/gvinciguerra/PyPGM',
+    url='https://pgm.di.unipi.it/',
+    project_urls={
+        'Documentation': 'https://pgm.di.unipi.it/docs/python-reference/',
+        'Source': 'https://github.com/gvinciguerra/PyGM/',
+        'Tracker': 'https://github.com/gvinciguerra/PyGM/issues',
+    },
     license='GPL-3.0',
     description=('Sorted containers with state-of-the-art query performance '
                  'and compressed memory usage'),

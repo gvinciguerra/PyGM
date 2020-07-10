@@ -28,12 +28,12 @@ jobs:
         pip install pytest pytest-cov pybind11
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
         git submodule update --init --recursive --remote
-    - name: Install pypgm
+    - name: Install pygm
       run: |
         pip install .
     - name: Test with pytest
       run: |
-        pytest --cov-report=xml --cov pypgm
+        pytest --cov-report=xml --cov pygm
       working-directory: tests
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v1

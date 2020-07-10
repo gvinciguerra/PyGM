@@ -68,7 +68,7 @@ class SortedList(SortedContainer):
             to 64.
 
     Example:
-        >>> from pypgm import SortedList
+        >>> from pygm import SortedList
         >>> sl = SortedList([0, 1, 34, 144, 1, 55, 233, 2, 3, 21, 89, 5, 8, 13])
         >>> sl
         SortedList([0, 1, 1, ..., 144, 233])

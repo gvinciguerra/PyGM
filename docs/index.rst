@@ -1,4 +1,4 @@
-PyPGM documentation
+PyGM documentation
 ===================
 
 .. toctree::
@@ -12,14 +12,14 @@ Summary
 .. autosummary::
    :nosignatures:
 
-   pypgm.SortedList
-   pypgm.SortedSet
+   pygm.SortedList
+   pygm.SortedSet
 
 
 SortedList
 ==========
 
-.. autoclass:: pypgm.SortedList
+.. autoclass:: pygm.SortedList
    :members:
    :inherited-members:
    :special-members:
@@ -29,7 +29,7 @@ SortedList
 SortedSet
 =========
 
-.. autoclass:: pypgm.SortedSet
+.. autoclass:: pygm.SortedSet
    :members:
    :inherited-members:
    :special-members:
