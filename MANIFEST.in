@@ -1,2 +1,2 @@
-include PGM-Index/include/piecewise_linear_model.hpp
-include PGM-Index/include/pgm_index.hpp
+include PGM-index/include/piecewise_linear_model.hpp
+include PGM-index/include/pgm_index.hpp
