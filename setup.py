@@ -81,15 +81,18 @@ class BuildExt(build_ext):
 if sys.version_info[:2] < (3, 3):
     raise RuntimeError("Python version >= 3.3 required.")
 
-if 'CXX' not in os.environ:
+if 'CXX' not in os.environ:  # try to use the latest gcc
+    def gcc_sort_key(p):
+        x = os.path.basename(p).split('-')[-1]
+        return int(x) if x.isdigit() else 0
+
     path = os.getenv('PATH').split(os.path.pathsep)
-    globs = [os.path.join(p, 'g++*') for p in path]
-    gccs = [g for p in globs for g in glob.glob(p)]
-    gccs = sorted(gccs, key=lambda p: os.path.basename(p))
+    globs = [os.path.join(p, 'g++-*') for p in path]
+    gccs = sorted([g for p in globs for g in glob.glob(p)], key=gcc_sort_key)
     if len(gccs) > 0:
         os.environ["CC"] = gccs[-1]
         os.environ["CXX"] = gccs[-1]
-        print('Found GCC in ', gccs[-1])
+        print('Found GCC in', gccs[-1])
 
 setuptools.setup(
     name='pygm',
