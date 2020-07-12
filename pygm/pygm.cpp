@@ -71,6 +71,10 @@ template <typename K> class PGMWrapper : private PGMIndex<K, 1, EPSILON_RECURSIV
 
     void build_internal_pgm() {
         this->n = size();
+        if (this->n == 0) {
+            this->first_key = 0;
+            return;
+        }
         this->first_key = data.front();
         if (this->n < 1ull << 15)
             this->build(begin(), end(), epsilon, EPSILON_RECURSIVE);
