@@ -31,8 +31,8 @@ class SortedContainer(collections.abc.Sequence):
     def _initwitharg(self, o, typecode, epsilon, drop_duplicates):
         has_len = hasattr(o, '__len__')
         if o is None or (has_len and len(o) == 0):
-            self._typecode = 'b'
-            self._impl = _pygm.PGMIndexInt32()
+            self._typecode = 'q'
+            self._impl = _pygm.PGMIndexInt64()
             return
 
         # Init from internal _pygm objects
@@ -102,7 +102,8 @@ class SortedContainer(collections.abc.Sequence):
         If ``x`` is already present, the insertion point will be before (to
         the left of) any existing entries.
 
-        Similar to the ``bisect`` module in the standard library.
+        Similar to the `bisect <https://docs.python.org/3/library/bisect.html>`_
+        module in the standard library.
 
         Args:
             x: value to compare the elements to
@@ -118,7 +119,8 @@ class SortedContainer(collections.abc.Sequence):
         If ``x`` is already present, the insertion point will be after (to the
         right of) any existing entries.
 
-        Similar to the ``bisect`` module in the standard library.
+        Similar to the `bisect <https://docs.python.org/3/library/bisect.html>`_
+        module in the standard library.
 
         Args:
             x: value to compare the elements to
@@ -243,7 +245,7 @@ class SortedContainer(collections.abc.Sequence):
         * ``'leaf segments'`` number of segments in the last level of the index
         * ``'height'`` number of levels of the index
         * ``'epsilon'`` value of the trade-off parameter of the index
-        * ``'typecode'`` type of the elements (see the `array` module)
+        * ``'typecode'`` type of the elements
 
         Returns:
             dict[str, object]: a dictionary with stats about ``self``

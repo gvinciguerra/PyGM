@@ -181,7 +181,8 @@ class SortedList(SortedContainer):
 
             return op(len_self, len_other)
 
-        comparer.__name__ = '__{0}__'.format(op)
+        op_name = op.__name__
+        comparer.__name__ = '__{0}__'.format(op_name)
         doc_str = """Return ``True`` if and only if ``self`` is {0} ``other``.
 
         ``self.__{1}__(other)`` <==> ``self {2} other``
@@ -192,9 +193,9 @@ class SortedList(SortedContainer):
             other (iterable): a sequence of values
 
         Returns:
-            ``True`` if sorted list is {0} `other`
+            bool: ``True`` if sorted list is {0} `other`
         """
-        comparer.__doc__ = dedent(doc_str.format(doc, op.__name__, symbol))
+        comparer.__doc__ = dedent(doc_str.format(doc, op_name, symbol))
         return comparer
 
     __eq__ = _make_cmp(eq, '==', 'equal to')
