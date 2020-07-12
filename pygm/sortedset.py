@@ -17,10 +17,10 @@ class SortedSet(SortedContainer):
 
     Methods for set operations:
 
-    * :func:`SortedSet.difference`
-    * :func:`SortedSet.intersection`
-    * :func:`SortedSet.union`
-    * :func:`SortedSet.symmetric_difference`
+    * :func:`SortedSet.difference` (alias for ``set - other``)
+    * :func:`SortedSet.intersection` (alias for ``set & other``)
+    * :func:`SortedSet.union` (alias for ``set | other``)
+    * :func:`SortedSet.symmetric_difference` (alias for ``set ^ other``)
 
     Methods for accessing and querying elements:
 
@@ -35,6 +35,15 @@ class SortedSet(SortedContainer):
     * :func:`SortedSet.find_lt`
     * :func:`SortedSet.index`
     * :func:`SortedSet.rank`
+
+    Methods for set comparisons:
+
+    * :func:`SortedSet.__eq__` (set equality)
+    * :func:`SortedSet.__ne__` (set inequality)
+    * :func:`SortedSet.__ge__` (superset)
+    * :func:`SortedSet.__gt__` (proper superset)
+    * :func:`SortedSet.__le__` (subset)
+    * :func:`SortedSet.__lt__` (proper subset)
 
     Methods for iterating elements:
 
@@ -114,7 +123,7 @@ class SortedSet(SortedContainer):
     __sub__ = difference
 
     def symmetric_difference(self, other):
-        """Return a ``SortedSet` with the elements found in either ``self`` or
+        """Return a ``SortedSet`` with the elements found in either ``self`` or
         ``other`` but not in both of them.
 
         Values in ``other`` do not need to be in sorted order.
@@ -162,3 +171,140 @@ class SortedSet(SortedContainer):
         return SortedSet(self._impl, self._typecode)
 
     __copy__ = copy
+
+    def __eq__(self, other):
+        """Return ``True`` if and only if ``self`` is equal to ``other``.
+
+        ``self.__eq__(other)`` <==> ``self == other``
+
+        Comparisons use `set <https://docs.python.org/3/library/stdtypes.html#set>`_
+        semantics.
+
+        Args:
+            other (SortedSet or set): a sequence of values
+
+        Returns:
+            bool: ``True`` if sorted set is equal to ``other``
+        """
+        if isinstance(other, (SortedSet, set)):
+            if len(self) != len(other):
+                return False
+            args = SortedContainer._impl_or_iter(other)
+            return self._impl.equal_to(*args)
+        return NotImplemented
+
+    def __ne__(self, other):
+        """Return ``True`` if and only if ``self`` is not equal to ``other``.
+
+        ``self.__eq__(other)`` <==> ``self != other``
+
+        Comparisons use `set <https://docs.python.org/3/library/stdtypes.html#set>`_
+        semantics.
+
+        Args:
+            other (SortedSet or set): a sequence of values
+
+        Returns:
+            bool: ``True`` if sorted set is not equal to ``other``
+        """
+        if isinstance(other, (SortedSet, set)):
+            if len(self) != len(other):
+                return True
+            args = SortedContainer._impl_or_iter(other)
+            return self._impl.not_equal_to(*args)
+        return NotImplemented
+
+    def __lt__(self, other):
+        """Return ``True`` if and only if ``self`` is a proper subset of ``other``.
+
+        ``self.__lt__(other)`` <==> ``self < other``
+
+        Comparisons use `set <https://docs.python.org/3/library/stdtypes.html#set>`_
+        semantics.
+
+        Args:
+            other (SortedSet or set): a sequence of values
+
+        Returns:
+            bool: ``True`` if sorted set is a proper subset of ``other``
+        """
+        if isinstance(other, (SortedSet, set)):
+            args = SortedContainer._impl_or_iter(other)
+            return self._impl.subset(*args, True)
+        return NotImplemented
+
+    def __gt__(self, other):
+        """Return ``True`` if and only if ``self`` is a proper superset of ``other``.
+
+        ``self.__gt__(other)`` <==> ``self > other``
+
+        Comparisons use `set <https://docs.python.org/3/library/stdtypes.html#set>`_
+        semantics.
+
+        Args:
+            other (SortedSet or set): a sequence of values
+
+        Returns:
+            bool: ``True`` if sorted set is a proper superset of ``other``
+        """
+        if isinstance(other, (SortedSet, set)):
+            args = SortedContainer._impl_or_iter(other)
+            return self._impl.superset(*args, True)
+        return NotImplemented
+
+    def __le__(self, other):
+        """Return ``True`` if and only if ``self`` is a subset of ``other``.
+
+        ``self.__le__(other)`` <==> ``self <= other`` <==> 
+        ``self.issubset(other)``
+
+        Comparisons use `set <https://docs.python.org/3/library/stdtypes.html#set>`_
+        semantics.
+
+        Args:
+            other (SortedSet or set): a sequence of values
+
+        Returns:
+            bool: ``True`` if sorted set is a subset of ``other``
+        """
+        if isinstance(other, (SortedSet, set)):
+            args = SortedContainer._impl_or_iter(other)
+            return self._impl.subset(*args, False)
+        return NotImplemented
+
+    def __ge__(self, other):
+        """Return ``True`` if and only if ``self`` is a superset of ``other``.
+
+        ``self.__ge__(other)`` <==> ``self >= other`` <==> 
+        ``self.issuperset(other)``
+
+        Comparisons use `set <https://docs.python.org/3/library/stdtypes.html#set>`_
+        semantics.
+
+        Args:
+            other (SortedSet or set): a sequence of values
+
+        Returns:
+            bool: ``True`` if sorted set is a superset of ``other``
+        """
+        if isinstance(other, (SortedSet, set)):
+            args = SortedContainer._impl_or_iter(other)
+            return self._impl.superset(*args, False)
+        return NotImplemented
+
+    def isdisjoint(self, other):
+        """Return ``True`` if and only if the set has no elements in common
+        with ``other``.
+
+        Sets are disjoint if and only if their intersection is the empty set.
+
+        Args:
+            other (iterable): a sequence of values
+
+        Returns:
+            bool: ``True`` if ``self`` is disjoint from ``other``
+        """
+        return len(self & other) == 0
+
+    issubset = __le__
+    issuperset = __ge__

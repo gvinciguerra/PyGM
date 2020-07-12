@@ -62,12 +62,32 @@ OutputIt set_unique_symmetric_difference(InputIt1 first1, InputIt1 last1, InputI
     return std::unique_copy(first2, last2, out);
 }
 
+template <class InputIt1, class InputIt2>
+bool set_unique_includes(InputIt1 first1, InputIt1 last1, InputIt2 first2, InputIt2 last2, bool proper) {
+    bool is_proper = !proper;
+
+    for (; first2 != last2; ++first1) {
+        if (first1 == last1 || *first2 < *first1)
+            return false;
+
+        if (!(*first1 < *first2)) {
+            ++first2;
+            while (first2 != last2 && *first2 == *first1)
+                ++first2;
+        } else
+            is_proper = true;
+    }
+
+    is_proper |= first1 != last1;
+    return true && is_proper;
+}
+
 #define EPSILON_RECURSIVE 4
 
 template <typename K> class PGMWrapper : private PGMIndex<K, 1, EPSILON_RECURSIVE, double> {
     std::vector<K> data;
     bool duplicates;
-    size_t epsilon;
+    size_t epsilon = 64;
 
     void build_internal_pgm() {
         this->n = size();
@@ -213,6 +233,27 @@ template <typename K> class PGMWrapper : private PGMIndex<K, 1, EPSILON_RECURSIV
         return set_operation<std::set_intersection>(o, o_size, std::min(size(), o_size), false);
     }
 
+    template <bool Reverse> bool subset(const PGMWrapper<K> &q, size_t, bool proper) const {
+        if constexpr (Reverse)
+            return set_unique_includes(begin(), end(), q.begin(), q.end(), proper);
+        return set_unique_includes(q.begin(), q.end(), begin(), end(), proper);
+    }
+
+    template <bool Reverse> bool subset(py::iterator it, size_t it_size_hint, bool proper) const {
+        auto tmp = to_sorted_vector(it, it_size_hint);
+        if constexpr (Reverse)
+            return set_unique_includes(begin(), end(), tmp.begin(), tmp.end(), proper);
+        return set_unique_includes(tmp.begin(), tmp.end(), begin(), end(), proper);
+    }
+
+    bool equal_to(const PGMWrapper<K> &q, size_t) const { return data == q.data; }
+
+    bool equal_to(py::iterator it, size_t it_size_hint) const { return data == to_sorted_vector(it, it_size_hint); }
+
+    bool not_equal_to(const PGMWrapper<K> &q, size_t) const { return data != q.data; }
+
+    bool not_equal_to(py::iterator it, size_t it_size_hint) const { return data != to_sorted_vector(it, it_size_hint); }
+
     std::unordered_map<std::string, size_t> stats() const {
         std::unordered_map<std::string, size_t> stats;
         stats["epsilon"] = get_epsilon();
@@ -243,12 +284,8 @@ template <typename K> class PGMWrapper : private PGMIndex<K, 1, EPSILON_RECURSIV
     using back_iterator = typename std::back_insert_iterator<std::vector<K>>;
     using set_fun = back_iterator (*)(const_iterator, const_iterator, const_iterator, const_iterator, back_iterator);
 
-    template <set_fun F>
-    PGMWrapper<K> *set_operation(py::iterator it, size_t it_size_hint, size_t size_hint,
-                                 bool generates_duplicates) const {
-        std::vector<K> out;
+    static std::vector<K> to_sorted_vector(py::iterator &it, size_t it_size_hint) {
         std::vector<K> tmp;
-        out.reserve(size_hint);
         tmp.reserve(it_size_hint);
 
         auto sorted = true;
@@ -256,13 +293,22 @@ template <typename K> class PGMWrapper : private PGMIndex<K, 1, EPSILON_RECURSIV
             tmp.push_back(implicit_cast(*it++));
         for (; it != py::iterator::sentinel(); ++it) {
             auto x = implicit_cast(*it);
-            if (x < data.back())
+            if (x < tmp.back())
                 sorted = false;
             tmp.push_back(x);
         }
+
         if (!sorted)
             std::sort(tmp.begin(), tmp.end());
+        return tmp;
+    }
 
+    template <set_fun F>
+    PGMWrapper<K> *set_operation(py::iterator it, size_t it_size_hint, size_t size_hint,
+                                 bool generates_duplicates) const {
+        std::vector<K> out;
+        out.reserve(size_hint);
+        auto tmp = to_sorted_vector(it, it_size_hint);
         F(begin(), end(), tmp.begin(), tmp.end(), std::back_inserter(out));
         out.shrink_to_fit();
         return new PGMWrapper<K>(std::move(out), generates_duplicates, epsilon);
@@ -414,6 +460,9 @@ template <typename K> void declare_class(py::module &m, const std::string &name)
         .def("merge", &PGM::template merge<const PGM &>)
         .def("merge", &PGM::template merge<py::iterator>)
 
+        .def("drop_duplicates", [](const PGM &p) { return new PGM(p, true, p.get_epsilon()); })
+
+        // set operations
         .def("difference", &PGM::template set_difference<const PGM &>)
         .def("difference", &PGM::template set_difference<py::iterator>)
 
@@ -426,7 +475,17 @@ template <typename K> void declare_class(py::module &m, const std::string &name)
         .def("intersection", &PGM::template set_intersection<const PGM &>)
         .def("intersection", &PGM::template set_intersection<py::iterator>)
 
-        .def("drop_duplicates", [](const PGM &p) { return new PGM(p, true, p.get_epsilon()); })
+        .def("subset", py::overload_cast<const PGM &, size_t, bool>(&PGM::template subset<false>, py::const_))
+        .def("subset", py::overload_cast<py::iterator, size_t, bool>(&PGM::template subset<false>, py::const_))
+
+        .def("superset", py::overload_cast<const PGM &, size_t, bool>(&PGM::template subset<true>, py::const_))
+        .def("superset", py::overload_cast<py::iterator, size_t, bool>(&PGM::template subset<true>, py::const_))
+
+        .def("equal_to", py::overload_cast<const PGM &, size_t>(&PGM::equal_to, py::const_))
+        .def("equal_to", py::overload_cast<py::iterator, size_t>(&PGM::equal_to, py::const_))
+
+        .def("not_equal_to", py::overload_cast<const PGM &, size_t>(&PGM::not_equal_to, py::const_))
+        .def("not_equal_to", py::overload_cast<py::iterator, size_t>(&PGM::not_equal_to, py::const_))
 
         // other methods
         .def("stats", &PGM::stats)

@@ -1,9 +1,10 @@
 import bisect
+import itertools
 import random
 from array import array
 
 import pytest
-from pygm import SortedSet, SortedList
+from pygm import SortedList, SortedSet
 
 
 def test_len():
@@ -20,6 +21,31 @@ def test_init():
     assert list(SortedSet({1, 5, 5, 10})) == [1, 5, 10]
     assert list(SortedSet(range(5, 0, -1))) == [1, 2, 3, 4, 5]
     assert list(SortedSet(array('d', (1, 2, 2, 3)))) == [1., 2., 3.]
+
+
+def test_compare():
+    assert SortedSet({1, 2, 4, 8}) == {1, 2, 4, 8}
+    assert SortedSet({1, 2, 4, 8}) <= {1, 2, 4, 8}
+    assert SortedSet({1, 2, 4, 8}) >= {1, 2, 4, 8}
+    assert SortedSet({1, 2, 4, 8}) <= {1, 2, 3, 4, 8, 16}
+    assert SortedSet({1, 2, 4, 8}) >= {2, 8}
+    assert SortedSet({1, 2, 4, 8}) != {1, 2, 3, 8}
+    assert not SortedSet({1, 2, 4, 8}) == {1, 2, 4}
+    assert SortedSet({1, 2, 4, 8}) != {1, 2, 4, 8, 16}
+    assert SortedSet({1, 2, 4, 8}) > {2, 8}
+    assert SortedSet({1, 2, 4, 8}) < {1, 2, 3, 4, 8, 16}
+    assert SortedSet({1, 2, 4, 8}).issubset({1, 2, 4, 8, 16})
+    assert SortedSet({1, 2, 4, 8}).issuperset({2, 8})
+
+    random.seed(42)
+    ss = SortedSet(random.sample(range(250), 15))
+    for k in range(len(ss)):
+        for c in itertools.combinations(ss, k):
+            assert ss > set(c)
+
+    for op in ['eq', 'ge', 'gt', 'le', 'lt', 'ne']:
+        f = getattr(SortedSet({1}), '__%s__' % op)
+        assert NotImplemented == f({'a': 1, 'b': 2})
 
 
 def test_contains():
@@ -144,3 +170,11 @@ def test_symmetric_difference():
 def test_copy():
     assert len(SortedSet().copy()) == 0
     assert list(SortedSet([4, 1, 3, 3, 2]).copy()) == [1, 2, 3, 4]
+
+
+def test_isdisjoint():
+    assert SortedSet({1, 2, 4, 8}).isdisjoint({3, 5, 6, 9})
+    assert not SortedSet({1, 2, 4, 8}).isdisjoint({3, 5, 6, 8})
+    assert not SortedSet({1, 2, 4, 8}).isdisjoint(SortedSet({1, 2, 4, 8}))
+    assert SortedSet().isdisjoint(set())
+    assert SortedSet().isdisjoint(SortedSet())

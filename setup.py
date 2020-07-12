@@ -7,7 +7,7 @@ import tempfile
 import setuptools
 from setuptools.command.build_ext import build_ext
 
-__version__ = '0.1a0'
+__version__ = '0.1a1'
 
 
 class get_pybind_include(object):
