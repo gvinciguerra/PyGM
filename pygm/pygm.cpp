@@ -337,7 +337,7 @@ template <typename K> void declare_class(py::module &m, const std::string &name)
         .def("__contains__", &PGM::contains)
 
         .def(
-            "__getitem__",
+            "slice",
             [](const PGM &p, py::slice slice) -> PGM * {
                 size_t start, stop, step, length;
                 if (!slice.compute(p.size(), &start, &stop, &step, &length))
@@ -360,7 +360,7 @@ template <typename K> void declare_class(py::module &m, const std::string &name)
 
                 return new PGM(std::move(out), duplicates, p.get_epsilon());
             },
-            py::arg("slice").noconvert())
+            "slice"_a.noconvert())
 
         .def(
             "__getitem__",
@@ -371,7 +371,7 @@ template <typename K> void declare_class(py::module &m, const std::string &name)
                     throw py::index_error();
                 return p[i];
             },
-            py::arg("i").noconvert())
+            "i"_a.noconvert())
 
         .def(
             "__iter__", [](const PGM &p) { return py::make_iterator(p.begin(), p.end()); }, py::keep_alive<0, 1>())

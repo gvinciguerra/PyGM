@@ -101,8 +101,8 @@ class SortedList(SortedContainer):
             element at position ``i``
         """
         if isinstance(i, slice):
-            return SortedList(self._impl.__getitem__(i), self._typecode)
-        return self._impl.__getitem__(i)
+            return SortedList(self._impl.slice(i), self._typecode)
+        return self._impl[i]
 
     def __add__(self, other):
         """Return a new ``SortedList`` by merging the elements of ``self``

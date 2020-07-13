@@ -80,8 +80,8 @@ class SortedSet(SortedContainer):
             element at position ``i``
         """
         if isinstance(i, slice):
-            return SortedSet(self._impl.__getitem__(i), self._typecode)
-        return self._impl.__getitem__(i)
+            return SortedSet(self._impl.slice(i), self._typecode)
+        return self._impl[i]
 
     def union(self, other):
         """Return a new ``SortedSet`` with the elements in one or both ``self``
