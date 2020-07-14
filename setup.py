@@ -7,7 +7,7 @@ import tempfile
 import setuptools
 from setuptools.command.build_ext import build_ext
 
-__version__ = '0.1a1'
+__version__ = '0.1a2'
 
 
 class get_pybind_include(object):
@@ -105,7 +105,7 @@ setuptools.setup(
         'Source': 'https://github.com/gvinciguerra/PyGM/',
         'Tracker': 'https://github.com/gvinciguerra/PyGM/issues',
     },
-    license='GPL-3.0',
+    license='Apache-2.0',
     description=('Sorted containers with state-of-the-art query performance '
                  'and compressed memory usage'),
     long_description=open('README.md').read(),
@@ -116,7 +116,7 @@ setuptools.setup(
     cmdclass={'build_ext': BuildExt},
     zip_safe=False,
     classifiers=[
-        'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
+        'License :: OSI Approved :: Apache Software License',
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
         'Intended Audience :: Information Technology',
