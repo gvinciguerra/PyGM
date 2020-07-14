@@ -83,7 +83,7 @@ You can run and plot the experiments on your computer and your data with the not
 
 ## License
 
-This project is licensed under the terms of the GNU General Public License v3.0.
+This project is licensed under the terms of the Apache License 2.0.
 
 If you use the library in an academic setting, please cite the following paper:
 
