@@ -82,9 +82,10 @@ bool set_unique_includes(InputIt1 first1, InputIt1 last1, InputIt2 first2, Input
     return true && is_proper;
 }
 
+#define IGNORED_PARAMETER 1
 #define EPSILON_RECURSIVE 4
 
-template <typename K> class PGMWrapper : private PGMIndex<K, 1, EPSILON_RECURSIVE, double> {
+template <typename K> class PGMWrapper : private PGMIndex<K, IGNORED_PARAMETER, EPSILON_RECURSIVE, double> {
     std::vector<K> data;
     bool duplicates;
     size_t epsilon = 64;
@@ -181,28 +182,28 @@ template <typename K> class PGMWrapper : private PGMIndex<K, 1, EPSILON_RECURSIV
         build_internal_pgm();
     }
 
-    ApproxPos find_approximate_position(const K &key) const {
+    ApproxPos search(const K &key) const {
         auto k = std::max(this->first_key, key);
         auto it = this->segment_for_key(k);
         auto pos = std::min<size_t>((*it)(k), std::next(it)->intercept);
-        auto lo = SUB_ERR(pos, epsilon);
-        auto hi = ADD_ERR(pos, epsilon + 1, this->n);
+        auto lo = PGM_SUB_EPS(pos, epsilon);
+        auto hi = PGM_ADD_EPS(pos, epsilon, this->n);
         return {pos, lo, hi};
     }
 
     bool contains(K x) const {
-        auto ap = find_approximate_position(x);
-        return std::binary_search(data.begin() + ap.lo, data.begin() + ap.hi, x);
+        auto range = search(x);
+        return std::binary_search(data.begin() + range.lo, data.begin() + range.hi, x);
     }
 
     const_iterator lower_bound(K x) const {
-        auto ap = find_approximate_position(x);
-        return std::lower_bound(data.begin() + ap.lo, data.begin() + ap.hi, x);
+        auto range = search(x);
+        return std::lower_bound(data.begin() + range.lo, data.begin() + range.hi, x);
     }
 
     const_iterator upper_bound(K x) const {
-        auto ap = find_approximate_position(x);
-        auto it = std::upper_bound(data.begin() + ap.lo, data.begin() + ap.hi, x);
+        auto range = search(x);
+        auto it = std::upper_bound(data.begin() + range.lo, data.begin() + range.hi, x);
         if (!duplicates)
             return it;
 
