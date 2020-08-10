@@ -2,13 +2,12 @@ name: build
 
 on:
   push:
-    branches: [ master ]
+    branches: [master]
   pull_request:
-    branches: [ master ]
+    branches: [master]
 
 jobs:
   build:
-
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -16,31 +15,60 @@ jobs:
         python-version: [3.5, 3.6, 3.7, 3.8]
 
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
-      run: |
-        if [ "$RUNNER_OS" == "macOS" ]; then brew install libomp; fi
-        python -m pip install --upgrade pip
-        pip install pytest pytest-cov pybind11
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-        git submodule update --init --recursive --remote
-    - name: Install pygm
-      run: |
-        pip install .
-    - name: Test with pytest
-      run: |
-        pytest --cov-report=xml --cov pygm
-      working-directory: tests
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v1
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        file: tests/coverage.xml
-        flags: unittests
-        env_vars: OS,PYTHON
-        name: codecov-umbrella
-        fail_ci_if_error: false
+      - uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          if [ "$RUNNER_OS" == "macOS" ]; then brew install libomp; fi
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          git submodule update --init --recursive --remote
+      - name: Install pygm
+        run: pip install .
+      - name: Test with pytest
+        run: pytest --cov-report=xml --cov pygm
+        working-directory: tests
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: tests/coverage.xml
+          flags: unittests
+          env_vars: OS,PYTHON
+          name: codecov-umbrella
+          fail_ci_if_error: false
+
+  build_wheels:
+    name: build wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: "3.7"
+      - name: Install dependencies
+        run: |
+          if [ "$RUNNER_OS" == "macOS" ]; then brew install libomp; fi
+          python -m pip install --upgrade pip
+          pip install pybind11==2.5.0 cibuildwheel==1.5.5
+          git submodule update --init --recursive --remote
+      - name: Build source distribution
+        if: matrix.os == 'ubuntu-latest'
+        run: python setup.py sdist
+      - name: Build wheels
+        env:
+          CIBW_SKIP: cp27-* pp27-*
+        run: python -m cibuildwheel --output-dir dist
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: wheels-and-sdist
+          path: dist/
