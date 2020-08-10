@@ -65,7 +65,7 @@ jobs:
         run: python setup.py sdist
       - name: Build wheels
         env:
-          CIBW_SKIP: cp27-* pp27-*
+          CIBW_SKIP: "cp27-* pp27-* *-manylinux_i686"
         run: |
           if [ "$RUNNER_OS" == "macOS" ]; then export CIBW_REPAIR_WHEEL_COMMAND="delocate-listdeps {wheel} && delocate-wheel -w {dest_dir} {wheel}"; fi
           python -m cibuildwheel --output-dir dist
