@@ -254,6 +254,12 @@ class SortedContainer(collections.abc.Sequence):
         d['typecode'] = self._typecode
         return d
 
+    def num_segments(self, level_num: int):
+        return self._impl.num_segments(level_num)
+
+    def segment(self, level_num: int, segment_num: int):
+        return self._impl.segment(level_num, segment_num)
+
     def __iter__(self):
         """Return an iterator over the elements of ``self``.
 
