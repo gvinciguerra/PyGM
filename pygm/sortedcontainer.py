@@ -260,8 +260,8 @@ class SortedContainer(collections.abc.Sequence):
         * ``'leaf segments'`` number of segments in the last level of the index
         * ``'segments counts'`` number of segments in each level of the index
         * ``'height'`` number of levels of the index
-        * ``'epsilon'`` value of the trade-off parameter for the last level
-        * ``'epsilon recursive'`` value of the trade-off parameter for upper levels
+        * ``'epsilon'`` error bound for the last level of the index
+        * ``'epsilon recursive'`` error bound for the upper levels of the index
         * ``'typecode'`` type of the elements
 
         Returns:
@@ -272,6 +272,21 @@ class SortedContainer(collections.abc.Sequence):
         return d
 
     def segment(self, level_num: int, segment_num: int):
+        """Return a segment from the index data structure.
+
+        The segment is represented as a dict with keys:
+        
+        * ``'key'`` the key of the segment
+        * ``'slope'`` the slope of the segment
+        * ``'intercept'`` the intercept of the segment
+
+        Args:
+            level_num (int): the level number of the segment
+            segment_num (int): the segment number within the level
+
+        Returns:
+            dict[str, object]: the segment data
+        """
         return self._impl.segment(level_num, segment_num)
 
     def __iter__(self):

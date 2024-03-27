@@ -115,6 +115,15 @@ def test_rank():
     assert l.rank(1) == 30
     assert l.rank(4) == 50
     assert l.rank(500) == len(l)
+    assert l.approximate_rank(1)[1] <= l.rank(1) 
+    assert l.approximate_rank(1)[2] >= l.rank(1) 
+    assert l.approximate_rank(4)[1] <= l.rank(4)
+    assert l.approximate_rank(4)[2] >= l.rank(4)
+
+
+def test_segment():
+    l = SortedList([2, 4, 8, 16, 32, 64, 128])
+    assert l.segment(0, 0)['key'] == 2
 
 
 def test_count():
