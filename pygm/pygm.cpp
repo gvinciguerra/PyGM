@@ -258,6 +258,7 @@ template <typename K> class PGMWrapper : private PGMIndex<K, IGNORED_PARAMETER, 
     std::unordered_map<std::string, size_t> stats() const {
         std::unordered_map<std::string, size_t> stats;
         stats["epsilon"] = get_epsilon();
+        stats["epsilon recursive"] = get_epsilon_recursive();
         stats["height"] = this->height();
         stats["index size"] = this->size_in_bytes();
         stats["data size"] = sizeof(K) * size() + sizeof(*this);
@@ -265,11 +266,43 @@ template <typename K> class PGMWrapper : private PGMIndex<K, IGNORED_PARAMETER, 
         return stats;
     }
 
+    size_t num_segments(size_t level_num) {
+        if (level_num < 0)
+            throw std::invalid_argument("level can't be negative");
+        if (level_num > this->height())
+            throw std::invalid_argument("level can't be greater than index height");
+
+        return this->levels_sizes[level_num];
+    }
+
+    std::unordered_map<std::string, double> segment(size_t level_num, int segment_num) {
+        if (level_num < 0)
+            throw std::invalid_argument("level can't be negative");
+        if (level_num > this->height())
+            throw std::invalid_argument("level can't be greater than index height");
+
+        std::unordered_map<std::string, double> segment;
+        segment["epsilon"] = level_num == 0 ? get_epsilon() : get_epsilon_recursive();
+
+        auto segment_it = this->segments.begin() + this->levels_offsets[level_num];
+        for(int sn = segment_num; sn > 0; --sn) {
+            ++segment_it;
+        }
+
+        segment["key"] = segment_it->key;
+        segment["slope"] = segment_it->slope;
+        segment["intercept"] = segment_it->intercept;
+
+        return segment;
+    }
+
     K operator[](size_t i) const { return data[i]; }
 
     size_t size() const { return data.size(); }
 
     size_t get_epsilon() const { return epsilon; }
+
+    size_t get_epsilon_recursive() const { return EPSILON_RECURSIVE; }
 
     bool has_duplicates() const { return duplicates; }
 
@@ -490,6 +523,9 @@ template <typename K> void declare_class(py::module &m, const std::string &name)
 
         // other methods
         .def("stats", &PGM::stats)
+
+        .def("segment", &PGM::segment)
+        .def("num_segments", &PGM::num_segments)
 
         .def("has_duplicates", &PGM::has_duplicates);
 }
