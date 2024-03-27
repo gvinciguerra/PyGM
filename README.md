@@ -1,11 +1,11 @@
 <p align="center">
-  <img src="https://gvinciguerra.github.io/PGM-index/images/pygm.svg" alt="pygm" style="width: 565px" />
+  <img src="https://gvinciguerra.github.io/PGM-index/images/pygm.svg" alt="pygm" style="width: 300px" />
 </p>
 
 <p align="center">PyGM is a Python library that enables fast query operations on sorted lists of numbers (like integers and floats) with a tiny memory overhead. Internally, it features the <a href="https://github.com/gvinciguerra/PGM-index">PGM-index</a>, a state-of-the-art learned data structure that robustly scales to billions of elements in just a few tens of megabytes.</p>
 
 <p align="center">
-    <a href="https://github.com/gvinciguerra/PyGM/actions?query=workflow%3Atests"><img src="https://github.com/gvinciguerra/PyGM/workflows/build/badge.svg?branch=master" alt="Build status" /></a>
+    <a href="https://github.com/gvinciguerra/PyGM/actions/workflows/build.yml"><img src="https://github.com/gvinciguerra/PyGM/actions/workflows/build.yml/badge.svg" alt="Build status" /></a>
     <a href="https://codecov.io/gh/gvinciguerra/PyGM"><img src="https://codecov.io/gh/gvinciguerra/PyGM/branch/master/graph/badge.svg?token=G20KV3DLAN" alt="Code coverage"/></a>
     <a href="https://pypi.org/project/pygm/"><img src="https://img.shields.io/pypi/v/pygm" alt="PyPI"/></a>
     <a href="https://github.com/gvinciguerra/PyGM/blob/master/LICENSE"><img src="https://img.shields.io/github/license/gvinciguerra/PyGM" alt="License" /></a>
