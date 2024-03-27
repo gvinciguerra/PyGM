@@ -8,7 +8,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "pgm_index.hpp"
+#include "pgm/pgm_index.hpp"
 
 namespace py = pybind11;
 using namespace pybind11::literals;
@@ -85,7 +85,7 @@ bool set_unique_includes(InputIt1 first1, InputIt1 last1, InputIt2 first2, Input
 #define IGNORED_PARAMETER 1
 #define EPSILON_RECURSIVE 4
 
-template <typename K> class PGMWrapper : private PGMIndex<K, IGNORED_PARAMETER, EPSILON_RECURSIVE, double> {
+template <typename K> class PGMWrapper : private pgm::PGMIndex<K, IGNORED_PARAMETER, EPSILON_RECURSIVE, double> {
     std::vector<K> data;
     bool duplicates;
     size_t epsilon = 64;
@@ -98,10 +98,10 @@ template <typename K> class PGMWrapper : private PGMIndex<K, IGNORED_PARAMETER, 
         }
         this->first_key = data.front();
         if (this->n < 1ull << 15)
-            this->build(begin(), end(), epsilon, EPSILON_RECURSIVE);
+            this->build(begin(), end(), epsilon, EPSILON_RECURSIVE, this->segments, this->levels_offsets);
         else {
             py::gil_scoped_release release;
-            this->build(begin(), end(), epsilon, EPSILON_RECURSIVE);
+            this->build(begin(), end(), epsilon, EPSILON_RECURSIVE, this->segments, this->levels_offsets);
         }
     }
 
@@ -141,7 +141,6 @@ template <typename K> class PGMWrapper : private PGMIndex<K, IGNORED_PARAMETER, 
             this->n = p.n;
             this->segments = p.segments;
             this->first_key = p.first_key;
-            this->levels_sizes = p.levels_sizes;
             this->levels_offsets = p.levels_offsets;
         } else {
             build_internal_pgm();
@@ -182,7 +181,7 @@ template <typename K> class PGMWrapper : private PGMIndex<K, IGNORED_PARAMETER, 
         build_internal_pgm();
     }
 
-    ApproxPos search(const K &key) const {
+    pgm::ApproxPos search(const K &key) const {
         auto k = std::max(this->first_key, key);
         auto it = this->segment_for_key(k);
         auto pos = std::min<size_t>((*it)(k), std::next(it)->intercept);
@@ -268,18 +267,18 @@ template <typename K> class PGMWrapper : private PGMIndex<K, IGNORED_PARAMETER, 
 
     size_t num_segments(size_t level_num) {
         if (level_num < 0)
-            throw std::invalid_argument("level can't be negative");
-        if (level_num > this->height())
-            throw std::invalid_argument("level can't be greater than index height");
+            throw std::invalid_argument("level can't be < 0");
+        if (level_num >= this->height())
+            throw std::invalid_argument("level can't be >= index height");
 
-        return this->levels_sizes[level_num];
+        return this->levels_offsets[level_num + 1] - this->levels_offsets[level_num] - 1;
     }
 
     std::unordered_map<std::string, double> segment(size_t level_num, int segment_num) {
         if (level_num < 0)
-            throw std::invalid_argument("level can't be negative");
-        if (level_num > this->height())
-            throw std::invalid_argument("level can't be greater than index height");
+            throw std::invalid_argument("level can't be < 0");
+        if (level_num >= this->height())
+            throw std::invalid_argument("level can't be >= index height");
 
         std::unordered_map<std::string, double> segment;
         segment["epsilon"] = level_num == 0 ? get_epsilon() : get_epsilon_recursive();
