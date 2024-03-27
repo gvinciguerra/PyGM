@@ -272,10 +272,10 @@ template <typename K> class PGMWrapper : private pgm::PGMIndex<K, IGNORED_PARAME
     }
 
     std::unordered_map<std::string, double> segment(size_t level_num, int segment_num) {
-        if (level_num < 0)
-            throw std::invalid_argument("level can't be < 0");
         if (level_num >= this->height())
             throw std::invalid_argument("level can't be >= index height");
+        if (segment_num >= num_segments(level_num))
+            throw std::invalid_argument("segment can't be >= number of segments in level");
 
         std::unordered_map<std::string, double> segment;
         segment["epsilon"] = level_num == 0 ? get_epsilon() : get_epsilon_recursive();
