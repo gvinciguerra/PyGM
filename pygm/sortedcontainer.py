@@ -6,32 +6,32 @@ from . import _pygm
 class SortedContainer(collections.abc.Sequence):
     @staticmethod
     def _fromtypecode(typecode, *args):
-        if typecode in 'BHI':
+        if typecode in "BHI":
             return _pygm.PGMIndexUInt32(*args)
-        elif typecode in 'LQN':
+        elif typecode in "LQN":
             return _pygm.PGMIndexUInt64(*args)
-        elif typecode in 'bhi':
+        elif typecode in "bhi":
             return _pygm.PGMIndexInt32(*args)
-        elif typecode in 'lqn':
+        elif typecode in "lqn":
             return _pygm.PGMIndexInt64(*args)
-        elif typecode in 'ef':
+        elif typecode in "ef":
             return _pygm.PGMIndexFloat(*args)
-        elif typecode in 'd':
+        elif typecode in "d":
             return _pygm.PGMIndexDouble(*args)
         else:
-            raise TypeError('Unsupported typecode')
+            raise TypeError("Unsupported typecode")
 
     @staticmethod
     def _impl_or_iter(o):
-        n = len(o) if hasattr(o, '__len__') else 0
+        n = len(o) if hasattr(o, "__len__") else 0
         o = o._impl if isinstance(o, SortedContainer) else iter(o)
         return (o, n)
 
     @staticmethod
     def _initwitharg(self, o, typecode, epsilon, drop_duplicates):
-        has_len = hasattr(o, '__len__')
+        has_len = hasattr(o, "__len__")
         if o is None or (has_len and len(o) == 0):
-            self._typecode = 'q'
+            self._typecode = "q"
             self._impl = _pygm.PGMIndexInt64()
             return
 
@@ -66,11 +66,11 @@ class SortedContainer(collections.abc.Sequence):
 
             # Find the typecode by inspecting the type of the elements
             anyfloat = any(isinstance(x, float) for x in o)
-            self._typecode = 'd' if anyfloat else 'q'
+            self._typecode = "d" if anyfloat else "q"
             self._impl = tinit(self._typecode, iter(o), *args)
             return
 
-        raise TypeError('Unsupported argument type')
+        raise TypeError("Unsupported argument type")
 
     def __len__(self):
         """Return the number of elements in ``self``.
@@ -179,7 +179,7 @@ class SortedContainer(collections.abc.Sequence):
         return self._impl.find_ge(x)
 
     def rank(self, x):
-        """Return the number of elements less than or equal to ``x``
+        """Return the number of elements less than or equal to ``x``.
 
         Args:
             x: value to compare the elements to
@@ -188,6 +188,21 @@ class SortedContainer(collections.abc.Sequence):
             int: number of elements ``<= x``
         """
         return self._impl.rank(x)
+
+    def approximate_rank(self, x):
+        """
+        Return an approximate rank and the range where ``x`` can be found.
+
+        Args:
+            x: value to compare the elements to
+
+        Returns:
+            tuple[int, int, int]: the approximate rank, the lower bound
+                (inclusive) and the upper bound (exclusive) of the range where
+                ``x`` can be found
+
+        """
+        return self._impl.approximate_rank(x)
 
     def count(self, x):
         """Return the number of elements equal to ``x``.
@@ -208,9 +223,9 @@ class SortedContainer(collections.abc.Sequence):
             b: upper bound value
             inclusive (tuple[bool, bool], optional): a pair of boolean
                 indicating whether the bounds are inclusive (``True``) or
-                exclusive (``False``). Defaults to ``(True, True)``.
-            reverse (bool, optional): if ``True`` return an reverse iterator.
-                Defaults to ``False``.
+                exclusive (``False``). Defaults to ``(True, True)``
+            reverse (bool, optional): if ``True`` return an reverse iterator.
+                Defaults to ``False``
 
         Returns:
             iterator over the elements between the given bounds
@@ -223,9 +238,9 @@ class SortedContainer(collections.abc.Sequence):
         Args:
             x: element in the sorted list
             start (int, optional): restrict the search to the elements from
-                this position onwards. Defaults to ``None``.
+                this position onwards. Defaults to ``None``
             stop (int, optional): restrict the search to the elements before
-                this position. Defaults to ``None``.
+                this position. Defaults to ``None``
 
         Returns:
             int: first index of ``x``
@@ -251,7 +266,7 @@ class SortedContainer(collections.abc.Sequence):
             dict[str, object]: a dictionary with stats about ``self``
         """
         d = self._impl.stats()
-        d['typecode'] = self._typecode
+        d["typecode"] = self._typecode
         return d
 
     def num_segments(self, level_num: int):
@@ -288,13 +303,13 @@ class SortedContainer(collections.abc.Sequence):
         Returns:
             str: repr(self)
         """
-        preview = ''
+        preview = ""
         if len(self) < 6:
             preview += repr(list(self._impl))
         else:
             fmt_args = (self[0], self[1], self[2], self[-2], self[-1])
-            if self._typecode in 'fd':
-                preview += '[%g, %g, %g, ..., %g, %g]' % fmt_args
+            if self._typecode in "fd":
+                preview += "[%g, %g, %g, ..., %g, %g]" % fmt_args
             else:
-                preview += '[%d, %d, %d, ..., %d, %d]' % fmt_args
-        return '%s(%s)' % (self.__class__.__name__, preview)
+                preview += "[%d, %d, %d, ..., %d, %d]" % fmt_args
+        return "%s(%s)" % (self.__class__.__name__, preview)

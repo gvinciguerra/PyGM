@@ -276,7 +276,7 @@ template <typename K> class PGMWrapper : private pgm::PGMIndex<K, IGNORED_PARAME
         segment["epsilon"] = level_num == 0 ? get_epsilon() : get_epsilon_recursive();
 
         auto segment_it = this->segments.begin() + this->levels_offsets[level_num];
-        for(int sn = segment_num; sn > 0; --sn) {
+        for (int sn = segment_num; sn > 0; --sn) {
             ++segment_it;
         }
 
@@ -447,6 +447,12 @@ template <typename K> void declare_class(py::module &m, const std::string &name)
 
         .def("rank", [](const PGM &p, K x) { return std::distance(p.begin(), p.upper_bound(x)); })
 
+        .def("approximate_rank",
+             [](const PGM &p, K x) {
+                 auto [r, lo, hi] = p.search(x);
+                 return std::make_tuple(r, lo, hi);
+             })
+
         .def("count",
              [](const PGM &p, K x) -> size_t {
                  auto lb = p.lower_bound(x);
@@ -455,16 +461,15 @@ template <typename K> void declare_class(py::module &m, const std::string &name)
                  return std::distance(lb, p.upper_bound(x));
              })
 
-        .def(
-            "range",
-            [](const PGM &p, K a, K b, std::pair<bool, bool> inclusive, bool reverse) {
-                auto l_it = inclusive.first ? p.lower_bound(a) : p.upper_bound(a);
-                auto r_it = inclusive.second ? p.upper_bound(b) : p.lower_bound(b);
-                if (reverse)
-                    return py::make_iterator(std::make_reverse_iterator(r_it), std::make_reverse_iterator(l_it));
-                return py::make_iterator(l_it, r_it);
-            },
-            py::keep_alive<0, 1>())
+        .def("range",
+             [](const PGM &p, K a, K b, std::pair<bool, bool> inclusive, bool reverse) {
+                 auto l_it = inclusive.first ? p.lower_bound(a) : p.upper_bound(a);
+                 auto r_it = inclusive.second ? p.upper_bound(b) : p.lower_bound(b);
+                 if (reverse)
+                     return py::make_iterator(std::make_reverse_iterator(r_it), std::make_reverse_iterator(l_it));
+                 return py::make_iterator(l_it, r_it);
+             },
+             py::keep_alive<0, 1>())
 
         // list-like operations
         .def("index",
