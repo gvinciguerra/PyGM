@@ -246,18 +246,23 @@ template <typename K> class PGMWrapper : private pgm::PGMIndex<K, IGNORED_PARAME
 
     bool not_equal_to(py::iterator it, size_t it_size_hint) const { return data != to_sorted_vector(it, it_size_hint); }
 
-    std::unordered_map<std::string, size_t> stats() const {
-        std::unordered_map<std::string, size_t> stats;
+    py::dict stats() const {
+        std::vector<size_t> segments_counts;
+        for (size_t i = 0; i < this->height(); ++i)
+            segments_counts.push_back(num_segments(i));
+
+        py::dict stats;
         stats["epsilon"] = get_epsilon();
         stats["epsilon recursive"] = get_epsilon_recursive();
         stats["height"] = this->height();
         stats["index size"] = this->size_in_bytes();
         stats["data size"] = sizeof(K) * size() + sizeof(*this);
         stats["leaf segments"] = this->segments_count();
+        stats["segments counts"] = segments_counts;
         return stats;
     }
 
-    size_t num_segments(size_t level_num) {
+    size_t num_segments(size_t level_num) const {
         if (level_num < 0)
             throw std::invalid_argument("level can't be < 0");
         if (level_num >= this->height())
@@ -521,7 +526,6 @@ template <typename K> void declare_class(py::module &m, const std::string &name)
         .def("stats", &PGM::stats)
 
         .def("segment", &PGM::segment)
-        .def("num_segments", &PGM::num_segments)
 
         .def("has_duplicates", &PGM::has_duplicates);
 }

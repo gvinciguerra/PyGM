@@ -258,8 +258,10 @@ class SortedContainer(collections.abc.Sequence):
         * ``'data size'`` size of the elements in bytes
         * ``'index size'`` size of the index in bytes
         * ``'leaf segments'`` number of segments in the last level of the index
+        * ``'segments counts'`` number of segments in each level of the index
         * ``'height'`` number of levels of the index
-        * ``'epsilon'`` value of the trade-off parameter of the index
+        * ``'epsilon'`` value of the trade-off parameter for the last level
+        * ``'epsilon recursive'`` value of the trade-off parameter for upper levels
         * ``'typecode'`` type of the elements
 
         Returns:
@@ -268,9 +270,6 @@ class SortedContainer(collections.abc.Sequence):
         d = self._impl.stats()
         d["typecode"] = self._typecode
         return d
-
-    def num_segments(self, level_num: int):
-        return self._impl.num_segments(level_num)
 
     def segment(self, level_num: int, segment_num: int):
         return self._impl.segment(level_num, segment_num)
