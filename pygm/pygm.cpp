@@ -122,9 +122,6 @@ template <typename K> class PGMWrapper : private pgm::PGMIndex<K, IGNORED_PARAME
     PGMWrapper() = default;
 
     PGMWrapper(const PGMWrapper &p, bool drop_duplicates, size_t epsilon) : epsilon(epsilon) {
-        if (epsilon < 16)
-            throw std::invalid_argument("epsilon must be >= 16");
-
         if (p.has_duplicates() && drop_duplicates) {
             data.reserve(p.size());
             std::unique_copy(p.begin(), p.end(), std::back_inserter(data));
@@ -148,9 +145,6 @@ template <typename K> class PGMWrapper : private pgm::PGMIndex<K, IGNORED_PARAME
     }
 
     PGMWrapper(py::iterator it, size_t size_hint, bool drop_duplicates, size_t epsilon) : epsilon(epsilon) {
-        if (epsilon < 16)
-            throw std::invalid_argument("epsilon must be >= 16");
-
         auto sorted = true;
         data.reserve(size_hint);
         if (it != py::iterator::sentinel())
@@ -176,8 +170,6 @@ template <typename K> class PGMWrapper : private pgm::PGMIndex<K, IGNORED_PARAME
 
     PGMWrapper(std::vector<K> &&data, bool duplicates, size_t epsilon)
         : data(std::move(data)), duplicates(duplicates), epsilon(epsilon) {
-        if (epsilon < 16)
-            throw std::invalid_argument("epsilon must be >= 16");
         build_internal_pgm();
     }
 
