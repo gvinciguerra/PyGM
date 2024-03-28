@@ -257,6 +257,7 @@ class SortedContainer(collections.abc.Sequence):
 
         * ``'data size'`` size of the elements in bytes
         * ``'index size'`` size of the index in bytes
+        * ``'segment size'`` size of a segment in bytes
         * ``'leaf segments'`` number of segments in the last level of the index
         * ``'segments counts'`` number of segments in each level of the index
         * ``'height'`` number of levels of the index

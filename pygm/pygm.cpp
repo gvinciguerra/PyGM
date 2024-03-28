@@ -257,6 +257,7 @@ template <typename K> class PGMWrapper : private pgm::PGMIndex<K, IGNORED_PARAME
         stats["height"] = this->height();
         stats["index size"] = this->size_in_bytes();
         stats["data size"] = sizeof(K) * size() + sizeof(*this);
+        stats["segment size"] = sizeof(this->segments[0]);
         stats["leaf segments"] = this->segments_count();
         stats["segments counts"] = segments_counts;
         return stats;
