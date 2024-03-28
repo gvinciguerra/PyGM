@@ -272,7 +272,7 @@ template <typename K> class PGMWrapper : private pgm::PGMIndex<K, IGNORED_PARAME
         return this->levels_offsets[level_num + 1] - this->levels_offsets[level_num] - 1;
     }
 
-    std::unordered_map<std::string, double> segment(size_t level_num, int segment_num) {
+    std::unordered_map<std::string, double> segment(size_t level_num, size_t segment_num) {
         if (level_num >= this->height())
             throw std::invalid_argument("level can't be >= index height");
         if (segment_num >= num_segments(level_num))
