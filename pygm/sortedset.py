@@ -35,6 +35,7 @@ class SortedSet(SortedContainer):
     * :func:`SortedSet.find_lt`
     * :func:`SortedSet.index`
     * :func:`SortedSet.rank`
+    * :func:`SortedSet.approximate_rank`
 
     Methods for set comparisons:
 
@@ -55,6 +56,7 @@ class SortedSet(SortedContainer):
 
     * :func:`SortedSet.copy`
     * :func:`SortedSet.stats`
+    * :func:`SortedSet.segment`
     * :func:`SortedSet.__repr__`
 
     Args:

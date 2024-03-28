@@ -38,6 +38,7 @@ class SortedList(SortedContainer):
     * :func:`SortedList.find_lt`
     * :func:`SortedList.index`
     * :func:`SortedList.rank`
+    * :func:`SortedList.approximate_rank`
 
     Methods for iterating elements:
 
@@ -58,6 +59,7 @@ class SortedList(SortedContainer):
 
     * :func:`SortedList.copy`
     * :func:`SortedList.stats`
+    * :func:`SortedList.segment`
     * :func:`SortedList.__repr__`
 
     Args:
