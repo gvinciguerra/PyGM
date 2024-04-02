@@ -7,7 +7,7 @@ import tempfile
 import setuptools
 from setuptools.command.build_ext import build_ext
 
-__version__ = '1.0'
+__version__ = '1.0.1'
 
 
 class get_pybind_include(object):
@@ -117,7 +117,7 @@ setuptools.setup(
     zip_safe=False,
     classifiers=[
         'License :: OSI Approved :: Apache Software License',
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
         'Intended Audience :: Information Technology',
         'Intended Audience :: Science/Research',
@@ -131,6 +131,9 @@ setuptools.setup(
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
+        'Programming Language :: Python :: 3.12',
         'Topic :: Database',
         'Topic :: Scientific/Engineering',
         'Topic :: Scientific/Engineering :: Artificial Intelligence',

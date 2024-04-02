@@ -272,25 +272,19 @@ template <typename K> class PGMWrapper : private pgm::PGMIndex<K, IGNORED_PARAME
         return this->levels_offsets[level_num + 1] - this->levels_offsets[level_num] - 1;
     }
 
-    std::unordered_map<std::string, double> segment(size_t level_num, size_t segment_num) {
+    py::dict segment(size_t level_num, size_t segment_num) {
         if (level_num >= this->height())
             throw std::invalid_argument("level can't be >= index height");
         if (segment_num >= num_segments(level_num))
             throw std::invalid_argument("segment can't be >= number of segments in level");
 
-        std::unordered_map<std::string, double> segment;
-        segment["epsilon"] = level_num == 0 ? get_epsilon() : get_epsilon_recursive();
-
-        auto segment_it = this->segments.begin() + this->levels_offsets[level_num];
-        for (int sn = segment_num; sn > 0; --sn) {
-            ++segment_it;
-        }
-
-        segment["key"] = segment_it->key;
-        segment["slope"] = segment_it->slope;
-        segment["intercept"] = segment_it->intercept;
-
-        return segment;
+        auto &s = this->segments[this->levels_offsets[level_num] + segment_num];
+        py::dict out;
+        out["key"] = s.key;
+        out["slope"] = s.slope;
+        out["intercept"] = s.intercept;
+        out["epsilon"] = level_num == 0 ? get_epsilon() : get_epsilon_recursive();
+        return out;
     }
 
     K operator[](size_t i) const { return data[i]; }
